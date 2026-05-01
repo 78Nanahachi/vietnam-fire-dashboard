@@ -657,7 +657,7 @@
         <button class="tab-btn unknown" onclick="filterTable('不明', this)">不明</button>
       </div>
     </div>
-    <div class="table-wrapper">
+    <div class="table-wrapper" style="max-height:360px;overflow-y:auto;">
       <div class="loading" id="tableLoading">
         <div class="spinner"></div>
         <div>データを読み込んでいます...</div>
@@ -1094,7 +1094,7 @@ function renderTable(incidents) {
     return;
   }
 
-  incidents.forEach(inc => {
+  incidents.forEach((inc, index) => {
     const causeClass = inc.causeType === '電気系統' ? 'electric' : inc.causeType === 'その他' ? 'other' : 'unknown';
     const row = document.createElement('tr');
     row.dataset.cause = inc.causeType;
@@ -1291,7 +1291,8 @@ async function sendChat() {
 
     const res = await fetch(GAS_PROXY_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      redirect: 'follow',
+      headers: { 'Content-Type': 'text/plain' },
       body: JSON.stringify({
         message: msg,
         context: buildContext()
