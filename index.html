@@ -543,16 +543,42 @@ const GID = '0'; // LISTシートのgid（必要に応じて変更）
 // データ読み込み（Google Sheets公開CSV）
 // ============================================================
 async function loadData() {
-  const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(SHEET_NAME)}`;
+  // JSON形式で取得（HYPERLINK数式のURLも取得可能）
+  const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(SHEET_NAME)}`;
   
   try {
     const res = await fetch(url);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const csv = await res.text();
-    return parseCSV(csv);
+    const text = await res.text();
+    // Google Sheets JSONはコールバック形式なので除去
+    const json = JSON.parse(text.replace(/^[^(]+\(/, '').replace(/\);?$/, ''));
+    return parseGvizJSON(json);
   } catch(e) {
     throw new Error('スプレッドシートの読み込みに失敗しました。スプレッドシートが「リンクを知っている全員が閲覧可能」に設定されているか確認してください。\n\n' + e.message);
   }
+}
+
+// Google Visualization JSON形式をパース（HYPERLINKのURLも抽出）
+function parseGvizJSON(json) {
+  const cols = json.table.cols.map(c => c.label);
+  const rows = json.table.rows || [];
+  
+  return rows.map(row => {
+    const obj = {};
+    cols.forEach((col, i) => {
+      const cell = row.c && row.c[i];
+      if (!cell) { obj[col] = ''; return; }
+      // f（表示値）よりv（実際の値）を優先、HYPERLINKはpプロパティにURLが入る
+      if (cell.p && cell.p.url) {
+        obj[col] = cell.p.url;
+      } else if (cell.v !== null && cell.v !== undefined) {
+        obj[col] = String(cell.v);
+      } else {
+        obj[col] = cell.f || '';
+      }
+    });
+    return obj;
+  });
 }
 
 function parseCSV(csv) {
