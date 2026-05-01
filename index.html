@@ -512,18 +512,24 @@ function getField(row, candidates) {
 }
 
 function mapRow(row) {
+  // 要約列：スペースが混入している場合も対応
+  const summaryKey = Object.keys(row).find(k => k.replace(/\s/g,'') === '要約') || '要約';
+  // 緯度経度：列名にスペースや改行が混入している場合も対応
+  const latKey = Object.keys(row).find(k => k.includes('緯度')) || '緯度';
+  const lngKey = Object.keys(row).find(k => k.includes('経度')) || '経度';
+
   return {
     searchDate:  getField(row, ['検索日', '作成日']),
     period:      getField(row, ['対象期間', '調査対象期間']),
-    date:        getField(row, ['配信日', 'ニュース発信日']),
-    region:      getField(row, ['発生地域', '場所']),
-    causeType:   getField(row, ['原因区分', '原因']),
-    causeDetail: getField(row, ['原因詳細', '原因補足']),
-    summary:     getField(row, ['要約', '要 約']),
+    date:        getField(row, ['ニュース発信日', '配信日']),
+    region:      getField(row, ['場所', '発生地域']),
+    causeType:   getField(row, ['原因', '原因区分']),
+    causeDetail: getField(row, ['原因補足', '原因詳細']),
+    summary:     row[summaryKey] || getField(row, ['要約', '要 約', '要　約']),
     url:         getField(row, ['LINK', 'リンク', 'url']),
     source:      getField(row, ['情報源']),
-    lat:         parseFloat(getField(row, ['緯度'])) || null,
-    lng:         parseFloat(getField(row, ['経度'])) || null,
+    lat:         parseFloat(row[latKey]) || null,
+    lng:         parseFloat(row[lngKey]) || null,
   };
 }
 
@@ -723,6 +729,14 @@ async function init() {
   try {
     const raw = await loadData();
     if (!raw || raw.length === 0) throw new Error('データが空です');
+
+    // デバッグ：実際のヘッダーとサンプルをConsoleに出力
+    if (raw.length > 0) {
+      console.log('実際のヘッダー:', Object.keys(raw[0]));
+      const s = mapRow(raw[0]);
+      console.log('1行目マッピング:', s);
+      console.log('緯度:', s.lat, '経度:', s.lng);
+    }
 
     allIncidents = raw
       .map(mapRow)
