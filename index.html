@@ -305,7 +305,7 @@
     .map-section { grid-column: 1; grid-row: auto; }
     .chart-section { grid-column: 1; }
     header { padding: 16px; }
-    .header-right { display: none; }
+    .header-right { display: flex; }
     #map { height: 320px; }
     .chart-container { height: 220px; }
   }
@@ -317,6 +317,8 @@
     .fire-icon { font-size: 22px; }
     .header-title h1 { font-size: 14px; }
     .header-title p { display: none; }
+    .header-right { display: flex; }
+    .status-badge { display: none; }
     main { padding: 12px; max-width: 100%; overflow-x: hidden; }
     .kpi-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; width: 100%; }
     .kpi-card { padding: 14px; }
@@ -388,8 +390,10 @@
       <div class="status-dot"></div>
       LIVE DATA
     </div>
-    <div class="last-updated" id="lastUpdated">読み込み中...</div>
-    <div style="font-family:'Times New Roman',serif; font-weight:bold; font-style:italic; font-size:11px; color:#6b7fa3; margin-top:2px;">@ Itakkaskamuy</div>
+    <div style="display:flex; flex-direction:column; align-items:flex-end; gap:3px;">
+      <div class="last-updated" id="lastUpdated">読み込み中...</div>
+      <div style="font-family:'Times New Roman',serif; font-weight:bold; font-style:italic; font-size:11px; color:#6b7fa3;">@ Itakkaskamuy</div>
+    </div>
   </div>
 </header>
 
@@ -506,7 +510,7 @@
 </main>
 
 <footer>
-  <div>🔥 ベトナム工場火災モニタリング v.03</div>
+  <div>🔥 ベトナム工場火災モニタリング v.03 &nbsp;|&nbsp; <span style="font-family:'Times New Roman',serif; font-weight:bold; font-style:italic;">@ Itakkaskamuy</span></div>
   <div id="footerStats">データ読み込み中...</div>
 </footer>
 
