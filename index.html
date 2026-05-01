@@ -1154,6 +1154,8 @@ function setQuestion(btn) {
   document.getElementById('chatInput').focus();
 }
 
+var allStatsData = [];
+
 function buildContext() {
   if (!allIncidents || allIncidents.length === 0) return 'データなし';
   var NL = String.fromCharCode(10);
@@ -1197,6 +1199,24 @@ function buildContext() {
   allIncidents.forEach(function(r) {
     lines.push('・' + r.date + ' [' + r.causeType + '] ' + r.region + ' - ' + (r.summary || '').substring(0, 80));
   });
+
+  // STATSデータを追加
+  if (allStatsData && allStatsData.length > 0) {
+    lines.push('');
+    lines.push('=== 官公庁統計データ（ベトナム公安消防警察局）===');
+    allStatsData.forEach(function(r) {
+      var line = '・' + (r['対象月'] || '');
+      line += ' 全国火災:' + (r['全国火災総数'] || '—') + '件';
+      line += ' 工場倉庫:' + (r['工場・倉庫火災'] || '—') + '件';
+      line += ' 死者:' + (r['死者'] || '—') + '名';
+      line += ' 負傷者:' + (r['負傷者'] || '—') + '名';
+      line += ' 財産被害:' + (r['財産被害(億VND)'] || '—') + '億VND';
+      if (r['原因:電気系統']) line += ' 電気系統:' + r['原因:電気系統'] + '件';
+      if (r['原因:その他'])   line += ' その他:' + r['原因:その他'] + '件';
+      if (r['原因:不明'])     line += ' 不明:' + r['原因:不明'] + '件';
+      lines.push(line);
+    });
+  }
 
   return lines.join(NL);
 }
@@ -1353,6 +1373,7 @@ async function init() {
 
     try {
       var statsData = await loadStatsData();
+      allStatsData = statsData || [];
       renderOfficialStats(statsData);
     } catch(e) {
       console.log('STATSデータ読み込みスキップ:', e.message);
