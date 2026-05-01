@@ -1323,12 +1323,15 @@ async function sendChat() {
   history.scrollTop = history.scrollHeight;
 }
 
-// Enterキーで送信（Shift+Enterは改行）
+// Enterキーで送信（日本語IME変換中は送信しない）
 document.addEventListener('DOMContentLoaded', () => {
   const input = document.getElementById('chatInput');
   if (input) {
+    let isComposing = false;
+    input.addEventListener('compositionstart', () => { isComposing = true; });
+    input.addEventListener('compositionend', () => { isComposing = false; });
     input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
+      if (e.key === 'Enter' && !e.shiftKey && !isComposing) {
         e.preventDefault();
         sendChat();
       }
