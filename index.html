@@ -566,8 +566,7 @@ function parseCSV(csv) {
     if (ch === '"') {
       if (inQuotes && csv[i+1] === '"') { current += '"'; i++; }
       else inQuotes = !inQuotes;
-    } else if (ch === '
-' && !inQuotes) {
+    } else if (ch === '\n' && !inQuotes) {
       records.push(current);
       current = '';
     } else {
