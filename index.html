@@ -420,44 +420,106 @@
   </div>
 
   <!-- 官公庁統計パネル -->
-  <div class="official-stats-panel" id="officialStatsPanel" style="display:none;">
-    <div class="panel" style="margin-bottom:20px;">
-      <div class="panel-header">
-        <span class="panel-title">🏛 官公庁統計（ベトナム公安消防警察局）<span id="officialMonth" style="font-weight:normal;color:var(--text-muted);margin-left:8px;font-size:11px;"></span></span>
-        <a id="officialReportUrl" href="#" target="_blank" style="font-size:11px;color:var(--accent2);">レポートを開く →</a>
-      </div>
-      <div class="panel-body">
-        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;">
-          <div style="text-align:center;">
-            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">全国火災総数</div>
-            <div style="font-size:28px;font-weight:700;font-family:'DM Mono',monospace;color:var(--electric);" id="statTotalFires">—</div>
+  <div class="official-stats-panel" id="officialStatsPanel" style="display:none;margin-bottom:24px;">
+    <div class="panel-header" style="padding:14px 20px;background:var(--surface);border:1px solid var(--border);border-radius:12px 12px 0 0;display:flex;align-items:center;justify-content:space-between;">
+      <span class="panel-title">🏛 官公庁統計（ベトナム公安消防警察局）</span>
+      <a id="officialReportUrl" href="#" target="_blank" style="font-size:11px;color:var(--accent2);">最新レポートを開く →</a>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-top:none;border-radius:0 0 12px 12px;overflow:hidden;">
+
+      <!-- 2025年合計 -->
+      <div style="background:var(--surface);padding:20px;">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:14px;display:flex;align-items:center;gap:6px;">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#457b9d;"></span>
+          2025年 合計
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div>
+            <div style="font-size:10px;color:var(--text-muted);">全国火災</div>
+            <div style="font-size:26px;font-weight:700;font-family:'DM Mono',monospace;color:var(--accent2);" id="stat2025Total">—</div>
             <div style="font-size:10px;color:var(--text-muted);">件</div>
           </div>
-          <div style="text-align:center;">
-            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">工場・倉庫火災</div>
-            <div style="font-size:28px;font-weight:700;font-family:'DM Mono',monospace;color:var(--accent3);" id="statIndustrial">—</div>
+          <div>
+            <div style="font-size:10px;color:var(--text-muted);">工場・倉庫</div>
+            <div style="font-size:26px;font-weight:700;font-family:'DM Mono',monospace;color:var(--accent2);" id="stat2025Industrial">—</div>
             <div style="font-size:10px;color:var(--text-muted);">件</div>
           </div>
-          <div style="text-align:center;">
-            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">死者</div>
-            <div style="font-size:28px;font-weight:700;font-family:'DM Mono',monospace;color:var(--text-muted);" id="statDeaths">—</div>
+          <div>
+            <div style="font-size:10px;color:var(--text-muted);">死者</div>
+            <div style="font-size:22px;font-weight:700;font-family:'DM Mono',monospace;color:var(--text-muted);" id="stat2025Deaths">—</div>
             <div style="font-size:10px;color:var(--text-muted);">名</div>
           </div>
-          <div style="text-align:center;">
-            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">負傷者</div>
-            <div style="font-size:28px;font-weight:700;font-family:'DM Mono',monospace;color:var(--text-muted);" id="statInjuries">—</div>
-            <div style="font-size:10px;color:var(--text-muted);">名</div>
-          </div>
-          <div style="text-align:center;">
-            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">財産被害</div>
-            <div style="font-size:28px;font-weight:700;font-family:'DM Mono',monospace;color:var(--text-muted);" id="statDamage">—</div>
+          <div>
+            <div style="font-size:10px;color:var(--text-muted);">財産被害</div>
+            <div style="font-size:22px;font-weight:700;font-family:'DM Mono',monospace;color:var(--text-muted);" id="stat2025Damage">—</div>
             <div style="font-size:10px;color:var(--text-muted);">億VND</div>
           </div>
         </div>
-        <div style="margin-top:10px;font-size:11px;color:var(--text-muted);border-top:1px solid var(--border);padding-top:8px;">
-          ※ 工場・倉庫火災件数が記載されていない月はnullと表示されます
+      </div>
+
+      <!-- 2026年累計 -->
+      <div style="background:var(--surface);padding:20px;">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:14px;display:flex;align-items:center;gap:6px;">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f4a261;"></span>
+          2026年 累計
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div>
+            <div style="font-size:10px;color:var(--text-muted);">全国火災</div>
+            <div style="font-size:26px;font-weight:700;font-family:'DM Mono',monospace;color:var(--accent3);" id="stat2026Total">—</div>
+            <div style="font-size:10px;color:var(--text-muted);">件</div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text-muted);">工場・倉庫</div>
+            <div style="font-size:26px;font-weight:700;font-family:'DM Mono',monospace;color:var(--accent3);" id="stat2026Industrial">—</div>
+            <div style="font-size:10px;color:var(--text-muted);">件</div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text-muted);">死者</div>
+            <div style="font-size:22px;font-weight:700;font-family:'DM Mono',monospace;color:var(--text-muted);" id="stat2026Deaths">—</div>
+            <div style="font-size:10px;color:var(--text-muted);">名</div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text-muted);">財産被害</div>
+            <div style="font-size:22px;font-weight:700;font-family:'DM Mono',monospace;color:var(--text-muted);" id="stat2026Damage">—</div>
+            <div style="font-size:10px;color:var(--text-muted);">億VND</div>
+          </div>
         </div>
       </div>
+
+      <!-- 最新月 -->
+      <div style="background:var(--surface2);padding:20px;position:relative;">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-muted);margin-bottom:14px;display:flex;align-items:center;gap:6px;">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#e63946;animation:pulse 2s infinite;"></span>
+          最新月 <span id="officialMonth" style="color:var(--text);font-weight:600;margin-left:4px;"></span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div>
+            <div style="font-size:10px;color:var(--text-muted);">全国火災</div>
+            <div style="font-size:26px;font-weight:700;font-family:'DM Mono',monospace;color:var(--electric);" id="statLatestTotal">—</div>
+            <div style="font-size:10px;color:var(--text-muted);">件</div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text-muted);">工場・倉庫</div>
+            <div style="font-size:26px;font-weight:700;font-family:'DM Mono',monospace;color:var(--electric);" id="statLatestIndustrial">—</div>
+            <div style="font-size:10px;color:var(--text-muted);">件</div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text-muted);">死者</div>
+            <div style="font-size:22px;font-weight:700;font-family:'DM Mono',monospace;color:var(--text-muted);" id="statLatestDeaths">—</div>
+            <div style="font-size:10px;color:var(--text-muted);">名</div>
+          </div>
+          <div>
+            <div style="font-size:10px;color:var(--text-muted);">財産被害</div>
+            <div style="font-size:22px;font-weight:700;font-family:'DM Mono',monospace;color:var(--text-muted);" id="statLatestDamage">—</div>
+            <div style="font-size:10px;color:var(--text-muted);">億VND</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+    <div style="font-size:11px;color:var(--text-muted);margin-top:8px;padding:0 4px;">
+      ※ 出典：<a href="https://canhsatpccc.gov.vn/vi/news/thong-cao-bao-chi" target="_blank" style="color:var(--accent2);">ベトナム公安消防警察局</a>　工場・倉庫火災件数は月次レポートに記載がない場合「—」となります
     </div>
   </div>
 
@@ -949,18 +1011,43 @@ async function init() {
     try {
       const statsData = await loadStatsData();
       if (statsData && statsData.length > 0) {
-        const latest = statsData[statsData.length - 1];
         document.getElementById('officialStatsPanel').style.display = 'block';
-        document.getElementById('officialMonth').textContent = latest['対象月'] || '';
-        document.getElementById('statTotalFires').textContent = latest['全国火災総数'] || '—';
-        document.getElementById('statIndustrial').textContent = latest['工場・倉庫火災'] || '—';
-        document.getElementById('statDeaths').textContent = latest['死者'] || '—';
-        document.getElementById('statInjuries').textContent = latest['負傷者'] || '—';
-        document.getElementById('statDamage').textContent = latest['財産被害(億VND)'] || '—';
+
+        // 集計関数
+        const sumCol = (rows, col) => rows.reduce((acc, r) => {
+          const v = parseFloat((r[col]||'').toString().replace(/,/g,''));
+          return acc + (isNaN(v) ? 0 : v);
+        }, 0);
+        const fmtNum = (n) => n > 0 ? n.toLocaleString() : '—';
+        const fmtDec = (n) => n > 0 ? n.toFixed(2) : '—';
+
+        // 年別フィルター
+        const rows2025 = statsData.filter(r => (r['対象月']||'').includes('2025'));
+        const rows2026 = statsData.filter(r => (r['対象月']||'').includes('2026'));
+
+        // 2025年合計
+        document.getElementById('stat2025Total').textContent      = fmtNum(sumCol(rows2025, '全国火災総数'));
+        document.getElementById('stat2025Industrial').textContent  = fmtNum(sumCol(rows2025, '工場・倉庫火災'));
+        document.getElementById('stat2025Deaths').textContent      = fmtNum(sumCol(rows2025, '死者'));
+        document.getElementById('stat2025Damage').textContent      = fmtDec(sumCol(rows2025, '財産被害(億VND)'));
+
+        // 2026年累計
+        document.getElementById('stat2026Total').textContent      = fmtNum(sumCol(rows2026, '全国火災総数'));
+        document.getElementById('stat2026Industrial').textContent  = fmtNum(sumCol(rows2026, '工場・倉庫火災'));
+        document.getElementById('stat2026Deaths').textContent      = fmtNum(sumCol(rows2026, '死者'));
+        document.getElementById('stat2026Damage').textContent      = fmtDec(sumCol(rows2026, '財産被害(億VND)'));
+
+        // 最新月（対象月で降順ソートして最新を取得）
+        const sorted = [...statsData].sort((a,b) => (b['対象月']||'').localeCompare(a['対象月']||''));
+        const latest = sorted[0];
+        document.getElementById('officialMonth').textContent          = latest['対象月'] || '';
+        document.getElementById('statLatestTotal').textContent        = fmtNum(parseFloat(latest['全国火災総数']||0));
+        document.getElementById('statLatestIndustrial').textContent   = latest['工場・倉庫火災'] || '—';
+        document.getElementById('statLatestDeaths').textContent       = latest['死者'] || '—';
+        document.getElementById('statLatestDamage').textContent       = latest['財産被害(億VND)'] || '—';
+
         const reportUrl = latest['レポートURL'];
-        if (reportUrl) {
-          document.getElementById('officialReportUrl').href = reportUrl;
-        }
+        if (reportUrl) document.getElementById('officialReportUrl').href = reportUrl;
       }
     } catch(e) {
       console.log('STATSデータ読み込みスキップ:', e.message);
