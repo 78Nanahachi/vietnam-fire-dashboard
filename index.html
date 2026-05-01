@@ -570,6 +570,25 @@
             <div style="font-size:10px;color:var(--text-muted);">億VND</div>
           </div>
         </div>
+        <!-- 原因別件数（最新月のみ） -->
+        <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(3,1fr);gap:8px;" id="latestCausePanel">
+          <div style="text-align:center;background:rgba(230,57,70,0.1);border-radius:6px;padding:8px;">
+            <div style="font-size:10px;color:var(--text-muted);">電気系統</div>
+            <div style="font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:var(--electric);" id="statLatestElectric">—</div>
+            <div style="font-size:10px;color:var(--text-muted);">件</div>
+          </div>
+          <div style="text-align:center;background:rgba(42,157,143,0.1);border-radius:6px;padding:8px;">
+            <div style="font-size:10px;color:var(--text-muted);">その他</div>
+            <div style="font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:var(--green);" id="statLatestOther">—</div>
+            <div style="font-size:10px;color:var(--text-muted);">件</div>
+          </div>
+          <div style="text-align:center;background:rgba(69,123,157,0.1);border-radius:6px;padding:8px;">
+            <div style="font-size:10px;color:var(--text-muted);">不明</div>
+            <div style="font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:var(--unknown);" id="statLatestUnknown">—</div>
+            <div style="font-size:10px;color:var(--text-muted);">件</div>
+          </div>
+        </div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:6px;">※ 調査済み案件のみの集計</div>
       </div>
 
     </div>
@@ -1201,7 +1220,7 @@ function renderOfficialStats(statsData) {
       return acc + (isNaN(v) ? 0 : v);
     }, 0);
   }
-  function fmtNum(n) { return n > 0 ? n.toLocaleString() : '—'; }
+  function fmtNum(n) { return n > 0 ? Math.round(n).toLocaleString() : '—'; }
   function fmtDec(n) { return n > 0 ? n.toFixed(2) : '—'; }
 
   var rows2025 = statsData.filter(function(r) { return (r['対象月'] || '').indexOf('2025') >= 0; });
@@ -1228,6 +1247,17 @@ function renderOfficialStats(statsData) {
 
   var reportUrl = latest['レポートURL'];
   if (reportUrl) document.getElementById('officialReportUrl').href = reportUrl;
+
+  // 最新月の原因別件数
+  var elec    = latest['原因:電気系統'];
+  var oth     = latest['原因:その他'];
+  var unk     = latest['原因:不明'];
+  var causeEl = document.getElementById('statLatestElectric');
+  var causeOt = document.getElementById('statLatestOther');
+  var causeUn = document.getElementById('statLatestUnknown');
+  if (causeEl) causeEl.textContent = (elec && elec !== '') ? Math.round(parseFloat(elec)).toLocaleString() : '—';
+  if (causeOt) causeOt.textContent = (oth  && oth  !== '') ? Math.round(parseFloat(oth)).toLocaleString()  : '—';
+  if (causeUn) causeUn.textContent = (unk  && unk  !== '') ? Math.round(parseFloat(unk)).toLocaleString()  : '—';
 }
 
 // ============================================================
