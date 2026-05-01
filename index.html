@@ -911,7 +911,7 @@ function extractUrl(raw) {
 
 function mapRow(row) {
   // 要約列：スペースが混入している場合も対応
-  const summaryKey = Object.keys(row).find(k => k.replace(/\s/g,'') === '要約') || '要約';
+  const summaryKey = Object.keys(row).find(k => k.replace(/\u0020/g,'').replace(/\u3000/g,'') === '要約') || '要約';
   // 緯度経度：列名にスペースや改行が混入している場合も対応
   const latKey = Object.keys(row).find(k => k.includes('緯度')) || '緯度';
   const lngKey = Object.keys(row).find(k => k.includes('経度')) || '経度';
