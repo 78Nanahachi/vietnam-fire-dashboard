@@ -297,6 +297,65 @@
     font-family: 'DM Mono', monospace;
   }
 
+  /* Chat */
+  .chat-msg { display:flex; }
+  .chat-msg.user { justify-content:flex-end; }
+  .chat-bubble {
+    max-width:80%;
+    padding:10px 14px;
+    border-radius:12px;
+    font-size:13px;
+    line-height:1.6;
+  }
+  .bot-bubble {
+    background:var(--surface2);
+    border:1px solid var(--border);
+    color:var(--text);
+    border-radius:4px 12px 12px 12px;
+  }
+  .user-bubble {
+    background:var(--accent2);
+    color:white;
+    border-radius:12px 4px 12px 12px;
+  }
+  .suggest-btn {
+    background:transparent;
+    border:1px solid var(--border);
+    color:var(--text-muted);
+    padding:4px 10px;
+    border-radius:16px;
+    font-size:11px;
+    cursor:pointer;
+    font-family:'Noto Sans JP',sans-serif;
+    transition:all 0.2s;
+  }
+  .suggest-btn:hover {
+    border-color:var(--accent2);
+    color:var(--text);
+  }
+  .typing-indicator {
+    display:flex;
+    gap:4px;
+    align-items:center;
+    padding:10px 14px;
+    background:var(--surface2);
+    border:1px solid var(--border);
+    border-radius:4px 12px 12px 12px;
+    width:fit-content;
+  }
+  .typing-dot {
+    width:6px;height:6px;
+    background:var(--text-muted);
+    border-radius:50%;
+    animation:typingBounce 1.2s infinite;
+  }
+  .typing-dot:nth-child(2) { animation-delay:0.2s; }
+  .typing-dot:nth-child(3) { animation-delay:0.4s; }
+  @keyframes typingBounce {
+    0%,60%,100% { transform:translateY(0); }
+    30% { transform:translateY(-6px); }
+  }
+
   /* Responsive - タブレット */
   @media (max-width: 900px) {
     main { padding: 16px; }
@@ -517,8 +576,8 @@
     <div style="font-size:11px;color:var(--text-muted);margin-top:8px;padding:0 4px;">
       ※ 出典：<a href="https://canhsatpccc.gov.vn/vi/news/thong-cao-bao-chi" target="_blank" style="color:var(--accent2);">ベトナム公安消防警察局</a>　工場・倉庫火災件数は月次レポートに記載がない場合「—」となります
     </div>
-    <div class="notice" style="margin-top:24px;">
-      <span>⚠ 注意：</span>以下、検索でヒットしたニュースを自動カウントしています。同じ火災でもニュースソースが異なると別件として扱いカウントされる場合があります。従い、以下の年別合計数値や原因別比率は検索されたニュースをカウントした参考値としてご理解ください。
+    <div class="notice" style="margin-top:8px;">
+      <span>⚠ 注意：</span>検索でヒットしたニュースを自動カウントしています。同じ火災でも別のニュースソースだと別件として扱い、重複カウントされる場合があります。月次統計数値は参考値です。
     </div>
   </div>
 
@@ -627,6 +686,78 @@
       </table>
     </div>
   </div>
+  <!-- チャット欄 -->
+  <div class="table-section panel" style="margin-top:24px;">
+    <div class="panel-header">
+      <span class="panel-title">💬 データについて質問する</span>
+      <span style="font-size:11px;color:var(--text-muted);">Powered by Gemini</span>
+    </div>
+    <div style="padding:16px 20px;">
+
+      <!-- チャット履歴 -->
+      <div id="chatHistory" style="
+        min-height:120px;
+        max-height:320px;
+        overflow-y:auto;
+        margin-bottom:12px;
+        display:flex;
+        flex-direction:column;
+        gap:10px;
+      ">
+        <div class="chat-msg bot">
+          <div class="chat-bubble bot-bubble">
+            こんにちは！ベトナム工場火災データについて何でも質問してください。<br>
+            例：「2025年で火災が最も多かった月は？」「電気系統火災の傾向は？」
+          </div>
+        </div>
+      </div>
+
+      <!-- 入力欄 -->
+      <div style="display:flex;gap:8px;align-items:flex-end;">
+        <textarea id="chatInput"
+          placeholder="質問を入力してください..."
+          style="
+            flex:1;
+            background:var(--surface2);
+            border:1px solid var(--border);
+            border-radius:8px;
+            color:var(--text);
+            padding:10px 14px;
+            font-family:'Noto Sans JP',sans-serif;
+            font-size:13px;
+            resize:none;
+            height:44px;
+            max-height:120px;
+            outline:none;
+            line-height:1.5;
+          "
+          rows="1"
+        ></textarea>
+        <button id="chatSendBtn" onclick="sendChat()" style="
+          background:var(--accent2);
+          color:white;
+          border:none;
+          border-radius:8px;
+          padding:10px 20px;
+          font-size:13px;
+          font-family:'Noto Sans JP',sans-serif;
+          cursor:pointer;
+          height:44px;
+          white-space:nowrap;
+          transition:opacity 0.2s;
+        ">送信</button>
+      </div>
+
+      <!-- サジェスト -->
+      <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;">
+        <button onclick="setQuestion(this)" class="suggest-btn">2025年の火災件数合計は？</button>
+        <button onclick="setQuestion(this)" class="suggest-btn">電気系統が原因の火災はどこで多い？</button>
+        <button onclick="setQuestion(this)" class="suggest-btn">最近の火災の傾向は？</button>
+      </div>
+
+    </div>
+  </div>
+
 </main>
 
 <footer>
@@ -642,6 +773,7 @@ const SPREADSHEET_ID = '1_KGFXvrcPmn9tRWvhidGZp0MsLtELZ0FkqRDXFyNyZo';
 const SHEET_NAME = 'LIST';
 const STATS_SHEET_NAME = 'STATS';
 const GID = '0';
+const GAS_PROXY_URL = 'ここにGASのWebアプリURLを貼り付け';
 
 // ============================================================
 // STATSシート読み込み
@@ -1086,6 +1218,124 @@ async function init() {
     console.error(e);
   }
 }
+
+// ============================================================
+// チャット機能
+// ============================================================
+function setQuestion(btn) {
+  document.getElementById('chatInput').value = btn.textContent;
+  document.getElementById('chatInput').focus();
+}
+
+function buildContext() {
+  if (!allIncidents || allIncidents.length === 0) return 'データなし';
+  const total = allIncidents.length;
+  const electric = allIncidents.filter(r => r.causeType === '電気系統').length;
+  const other    = allIncidents.filter(r => r.causeType === 'その他').length;
+  const unknown  = allIncidents.filter(r => r.causeType === '不明').length;
+  const count2025 = allIncidents.filter(r => r.date && r.date.includes('2025')).length;
+  const count2026 = allIncidents.filter(r => r.date && r.date.includes('2026')).length;
+
+  // 地域別集計
+  const regionCount = {};
+  allIncidents.forEach(r => {
+    const region = (r.region || '不明').split('/')[0].trim();
+    regionCount[region] = (regionCount[region] || 0) + 1;
+  });
+  const topRegions = Object.entries(regionCount)
+    .sort((a,b) => b[1]-a[1]).slice(0,5)
+    .map(([r,c]) => `${r}:${c}件`).join('、');
+
+  return `
+- ニュース検出工場火災総件数: ${total}件
+- 2025年: ${count2025}件、2026年: ${count2026}件
+- 原因別: 電気系統${electric}件、その他${other}件、不明${unknown}件
+- 火災が多い地域TOP5: ${topRegions}
+- 最新3件: ${allIncidents.slice(-3).map(r => `${r.date} ${r.region}(${r.causeType})`).join(' / ')}
+  `;
+}
+
+async function sendChat() {
+  const input = document.getElementById('chatInput');
+  const msg   = input.value.trim();
+  if (!msg) return;
+
+  const history = document.getElementById('chatHistory');
+  const btn     = document.getElementById('chatSendBtn');
+
+  // ユーザーメッセージ表示
+  history.innerHTML += `
+    <div class="chat-msg user">
+      <div class="chat-bubble user-bubble">${msg}</div>
+    </div>`;
+  input.value = '';
+  btn.disabled = true;
+  btn.style.opacity = '0.5';
+
+  // タイピングインジケーター
+  const typingId = 'typing_' + Date.now();
+  history.innerHTML += `
+    <div class="chat-msg bot" id="${typingId}">
+      <div class="typing-indicator">
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+        <div class="typing-dot"></div>
+      </div>
+    </div>`;
+  history.scrollTop = history.scrollHeight;
+
+  try {
+    if (!GAS_PROXY_URL || GAS_PROXY_URL.includes('ここに')) {
+      throw new Error('GASのWebアプリURLが設定されていません。index.html内のGAS_PROXY_URLを設定してください。');
+    }
+
+    const res = await fetch(GAS_PROXY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: msg,
+        context: buildContext()
+      })
+    });
+
+    const data = await res.json();
+    const reply = data.reply || data.error || '応答を取得できませんでした';
+
+    // タイピング削除→回答表示
+    document.getElementById(typingId)?.remove();
+    history.innerHTML += `
+      <div class="chat-msg bot">
+        <div class="chat-bubble bot-bubble">${reply.replace(/
+/g,'<br>')}</div>
+      </div>`;
+
+  } catch(e) {
+    document.getElementById(typingId)?.remove();
+    history.innerHTML += `
+      <div class="chat-msg bot">
+        <div class="chat-bubble bot-bubble" style="color:#ff6b75;">
+          ⚠ エラー: ${e.message}
+        </div>
+      </div>`;
+  }
+
+  btn.disabled = false;
+  btn.style.opacity = '1';
+  history.scrollTop = history.scrollHeight;
+}
+
+// Enterキーで送信（Shift+Enterは改行）
+document.addEventListener('DOMContentLoaded', () => {
+  const input = document.getElementById('chatInput');
+  if (input) {
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendChat();
+      }
+    });
+  }
+});
 
 // Leafletのポップアップスタイル上書き
 document.addEventListener('DOMContentLoaded', () => {
