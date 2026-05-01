@@ -815,13 +815,15 @@ function parseGvizJSON(json) {
     cols.forEach((col, i) => {
       const cell = row.c && row.c[i];
       if (!cell) { obj[col] = ''; return; }
-      // f（表示値）よりv（実際の値）を優先、HYPERLINKはpプロパティにURLが入る
       if (cell.p && cell.p.url) {
         obj[col] = cell.p.url;
+      } else if (cell.f) {
+        // f（フォーマット済み表示値）を優先（日付の月ズレを防ぐ）
+        obj[col] = cell.f;
       } else if (cell.v !== null && cell.v !== undefined) {
         obj[col] = String(cell.v);
       } else {
-        obj[col] = cell.f || '';
+        obj[col] = '';
       }
     });
     return obj;
@@ -1230,59 +1232,54 @@ function setQuestion(btn) {
 function buildContext() {
   if (!allIncidents || allIncidents.length === 0) return 'データなし';
   const total = allIncidents.length;
-
-  // 年別・原因別集計
   const years = ['2025', '2026'];
   const causes = ['電気系統', 'その他', '不明'];
-  let yearCauseSummary = '';
-  years.forEach(yr => {
-    const yrData = allIncidents.filter(r => r.date && r.date.includes(yr));
+
+  let summary = 'ニュース検出工場火災データ（総件数: ' + total + '件）
+
+';
+
+  years.forEach(function(yr) {
+    const yrData = allIncidents.filter(function(r) { return r.date && r.date.includes(yr); });
     if (yrData.length === 0) return;
-    yearCauseSummary += `
-【${yr}年】合計${yrData.length}件
-`;
-    causes.forEach(c => {
-      const cData = yrData.filter(r => r.causeType === c);
+    summary += '【' + yr + '年】合計' + yrData.length + '件
+';
+    causes.forEach(function(c) {
+      const cData = yrData.filter(function(r) { return r.causeType === c; });
       if (cData.length > 0) {
-        yearCauseSummary += `  - ${c}: ${cData.length}件
-`;
-        // 詳細（地域・日付）
-        cData.forEach(r => {
-          yearCauseSummary += `    ・${r.date} ${r.region} 原因詳細:${r.causeDetail || '不明'}
-`;
+        summary += '  - ' + c + ': ' + cData.length + '件
+';
+        cData.forEach(function(r) {
+          summary += '    ・' + r.date + ' ' + r.region + ' 原因:' + (r.causeDetail || '不明') + '
+';
         });
       }
     });
+    summary += '
+';
   });
 
-  // 地域別集計
   const regionCount = {};
-  allIncidents.forEach(r => {
+  allIncidents.forEach(function(r) {
     const region = (r.region || '不明').split('/')[0].trim();
     regionCount[region] = (regionCount[region] || 0) + 1;
   });
   const topRegions = Object.entries(regionCount)
-    .sort((a,b) => b[1]-a[1]).slice(0,5)
-    .map(([r,c]) => `${r}:${c}件`).join('、');
+    .sort(function(a,b) { return b[1]-a[1]; }).slice(0,5)
+    .map(function(e) { return e[0] + ':' + e[1] + '件'; }).join('、');
 
-  // 全インシデント一覧（要約付き）
-  const incidentList = allIncidents.map(r =>
-    `・${r.date} [${r.causeType}] ${r.region} - ${(r.summary||'').substring(0,80)}`
-  ).join('
-');
+  summary += '【火災が多い地域TOP5】
+' + topRegions + '
 
-  return `
-=== ニュース検出工場火災データ（総件数: ${total}件）===
+';
+  summary += '【全インシデント一覧】
+';
+  allIncidents.forEach(function(r) {
+    summary += '・' + r.date + ' [' + r.causeType + '] ' + r.region + ' - ' + (r.summary || '').substring(0, 80) + '
+';
+  });
 
-【年別・原因別内訳】
-${yearCauseSummary}
-
-【火災が多い地域TOP5】
-${topRegions}
-
-【全インシデント一覧】
-${incidentList}
-  `;
+  return summary;
 }
 
 async function sendChat() {
