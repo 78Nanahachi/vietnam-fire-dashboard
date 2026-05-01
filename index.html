@@ -510,6 +510,25 @@
             <div style="font-size:10px;color:var(--text-muted);">億VND</div>
           </div>
         </div>
+        <!-- 原因別件数（2025年合計） -->
+        <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+          <div style="text-align:center;background:rgba(230,57,70,0.1);border-radius:6px;padding:8px;">
+            <div style="font-size:10px;color:var(--text-muted);">電気系統</div>
+            <div style="font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:var(--electric);" id="stat2025Electric">—</div>
+            <div style="font-size:10px;color:var(--text-muted);">件</div>
+          </div>
+          <div style="text-align:center;background:rgba(42,157,143,0.1);border-radius:6px;padding:8px;">
+            <div style="font-size:10px;color:var(--text-muted);">その他</div>
+            <div style="font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:var(--green);" id="stat2025Other">—</div>
+            <div style="font-size:10px;color:var(--text-muted);">件</div>
+          </div>
+          <div style="text-align:center;background:rgba(69,123,157,0.1);border-radius:6px;padding:8px;">
+            <div style="font-size:10px;color:var(--text-muted);">不明</div>
+            <div style="font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:var(--unknown);" id="stat2025Unknown">—</div>
+            <div style="font-size:10px;color:var(--text-muted);">件</div>
+          </div>
+        </div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:6px;">※ 調査済み案件のみの集計</div>
       </div>
 
       <!-- 2026年累計 -->
@@ -540,6 +559,25 @@
             <div style="font-size:10px;color:var(--text-muted);">億VND</div>
           </div>
         </div>
+        <!-- 原因別件数（2026年累計） -->
+        <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+          <div style="text-align:center;background:rgba(230,57,70,0.1);border-radius:6px;padding:8px;">
+            <div style="font-size:10px;color:var(--text-muted);">電気系統</div>
+            <div style="font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:var(--electric);" id="stat2026Electric">—</div>
+            <div style="font-size:10px;color:var(--text-muted);">件</div>
+          </div>
+          <div style="text-align:center;background:rgba(42,157,143,0.1);border-radius:6px;padding:8px;">
+            <div style="font-size:10px;color:var(--text-muted);">その他</div>
+            <div style="font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:var(--green);" id="stat2026Other">—</div>
+            <div style="font-size:10px;color:var(--text-muted);">件</div>
+          </div>
+          <div style="text-align:center;background:rgba(69,123,157,0.1);border-radius:6px;padding:8px;">
+            <div style="font-size:10px;color:var(--text-muted);">不明</div>
+            <div style="font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:var(--unknown);" id="stat2026Unknown">—</div>
+            <div style="font-size:10px;color:var(--text-muted);">件</div>
+          </div>
+        </div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:6px;">※ 調査済み案件のみの集計</div>
       </div>
 
       <!-- 最新月 -->
@@ -1230,10 +1268,31 @@ function renderOfficialStats(statsData) {
   document.getElementById('stat2025Industrial').textContent  = fmtNum(sumCol(rows2025, '工場・倉庫火災'));
   document.getElementById('stat2025Deaths').textContent      = fmtNum(sumCol(rows2025, '死者'));
   document.getElementById('stat2025Damage').textContent      = fmtDec(sumCol(rows2025, '財産被害(億VND)'));
+  // 2025年原因別合計
+  var e2025 = sumCol(rows2025, '原因:電気系統');
+  var o2025 = sumCol(rows2025, '原因:その他');
+  var u2025 = sumCol(rows2025, '原因:不明');
+  var el2025 = document.getElementById('stat2025Electric');
+  var ot2025 = document.getElementById('stat2025Other');
+  var un2025 = document.getElementById('stat2025Unknown');
+  if (el2025) el2025.textContent = e2025 > 0 ? Math.round(e2025).toLocaleString() : '—';
+  if (ot2025) ot2025.textContent = o2025 > 0 ? Math.round(o2025).toLocaleString() : '—';
+  if (un2025) un2025.textContent = u2025 > 0 ? Math.round(u2025).toLocaleString() : '—';
+
   document.getElementById('stat2026Total').textContent      = fmtNum(sumCol(rows2026, '全国火災総数'));
   document.getElementById('stat2026Industrial').textContent  = fmtNum(sumCol(rows2026, '工場・倉庫火災'));
   document.getElementById('stat2026Deaths').textContent      = fmtNum(sumCol(rows2026, '死者'));
   document.getElementById('stat2026Damage').textContent      = fmtDec(sumCol(rows2026, '財産被害(億VND)'));
+  // 2026年原因別累計
+  var e2026 = sumCol(rows2026, '原因:電気系統');
+  var o2026 = sumCol(rows2026, '原因:その他');
+  var u2026 = sumCol(rows2026, '原因:不明');
+  var el2026 = document.getElementById('stat2026Electric');
+  var ot2026 = document.getElementById('stat2026Other');
+  var un2026 = document.getElementById('stat2026Unknown');
+  if (el2026) el2026.textContent = e2026 > 0 ? Math.round(e2026).toLocaleString() : '—';
+  if (ot2026) ot2026.textContent = o2026 > 0 ? Math.round(o2026).toLocaleString() : '—';
+  if (un2026) un2026.textContent = u2026 > 0 ? Math.round(u2026).toLocaleString() : '—';
 
   var sorted = statsData.slice().sort(function(a, b) {
     return (b['対象月'] || '').localeCompare(a['対象月'] || '');
