@@ -344,34 +344,51 @@
       border: 1px solid var(--border);
       border-radius: 8px;
       margin-bottom: 12px;
-      padding: 12px;
+      padding: 14px;
       background: var(--surface2);
     }
     tbody td {
-      padding: 4px 0;
+      padding: 3px 0;
       border: none;
       font-size: 12px;
+      width: 100%;
     }
-    tbody td:before {
-      display: inline-block;
-      font-size: 10px;
+    /* beforeラベルを非表示にしてグリッドレイアウトで代替 */
+    tbody td:before { display: none; }
+
+    /* 発信日・地域・原因を横並びに */
+    tbody td:nth-child(1) {
+      font-size: 11px;
       color: var(--text-muted);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      margin-right: 6px;
-      min-width: 60px;
+      font-family: "DM Mono", monospace;
+      margin-bottom: 4px;
     }
-    tbody td:nth-child(1):before { content: "発信日"; }
-    tbody td:nth-child(2):before { content: "地域"; }
-    tbody td:nth-child(3):before { content: "原因"; }
+    tbody td:nth-child(2) {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 6px;
+      width: 100%;
+      word-break: keep-all;
+    }
+    tbody td:nth-child(3) { margin-bottom: 8px; }
     tbody td:nth-child(4) { display: none; }
-    tbody td:nth-child(5) { margin-top: 6px; border-top: 1px solid var(--border); padding-top: 8px; }
-    tbody td:nth-child(5):before { content: ""; display: block; margin-bottom: 4px; }
-    tbody td:nth-child(6) { margin-top: 6px; }
+    tbody td:nth-child(5) {
+      margin-top: 8px;
+      border-top: 1px solid var(--border);
+      padding-top: 10px;
+      font-size: 12px;
+      line-height: 1.7;
+      color: var(--text-muted);
+      width: 100%;
+    }
+    tbody td:nth-child(6) { margin-top: 8px; }
     .summary-cell { max-width: 100%; }
+    .summary-text { font-size: 12px; }
     .date-cell { white-space: normal; }
-    .region-cell { width: auto; max-width: 100%; }
+    .region-cell { width: 100% !important; max-width: 100%; }
     table { border: none; }
+    colgroup { display: none; }
   }
 </style>
 </head>
@@ -539,15 +556,33 @@ async function loadData() {
 }
 
 function parseCSV(csv) {
-  const lines = csv.split('\n');
-  if (lines.length < 2) return [];
-  
-  const headers = parseCSVLine(lines[0]);
+  const records = [];
+  let current = '';
+  let inQuotes = false;
+
+  // 文字単位でパース（改行を含むセルに対応）
+  for (let i = 0; i < csv.length; i++) {
+    const ch = csv[i];
+    if (ch === '"') {
+      if (inQuotes && csv[i+1] === '"') { current += '"'; i++; }
+      else inQuotes = !inQuotes;
+    } else if (ch === '
+' && !inQuotes) {
+      records.push(current);
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  if (current.trim()) records.push(current);
+
+  if (records.length < 2) return [];
+
+  const headers = parseCSVLine(records[0]);
   const rows = [];
-  
-  for (let i = 1; i < lines.length; i++) {
-    if (!lines[i].trim()) continue;
-    const values = parseCSVLine(lines[i]);
+  for (let i = 1; i < records.length; i++) {
+    if (!records[i].trim()) continue;
+    const values = parseCSVLine(records[i]);
     const row = {};
     headers.forEach((h, idx) => {
       row[h.trim().replace(/"/g, '')] = (values[idx] || '').trim().replace(/^"|"$/g, '');
@@ -588,6 +623,18 @@ function getField(row, candidates) {
   return '';
 }
 
+// HYPERLINK数式・通常URL・"LINK"テキストからURLを抽出
+function extractUrl(raw) {
+  if (!raw) return '';
+  // =HYPERLINK("https://...", "LINK") 形式
+  const m1 = raw.match(/HYPERLINK\s*\(\s*"(https?:\/\/[^"]+)"/i);
+  if (m1) return m1[1];
+  // URLが直接入っている場合
+  if (raw.startsWith('http')) return raw;
+  // "LINK"などのテキストのみの場合は空
+  return '';
+}
+
 function mapRow(row) {
   // 要約列：スペースが混入している場合も対応
   const summaryKey = Object.keys(row).find(k => k.replace(/\s/g,'') === '要約') || '要約';
@@ -603,7 +650,7 @@ function mapRow(row) {
     causeType:   getField(row, ['原因', '原因区分']),
     causeDetail: getField(row, ['原因補足', '原因詳細']),
     summary:     row[summaryKey] || getField(row, ['要約', '要 約', '要　約']),
-    url:         getField(row, ['LINK', 'リンク', 'url']),
+    url:         extractUrl(getField(row, ['LINK', 'リンク', 'url'])),
     source:      getField(row, ['情報源']),
     lat:         parseFloat(row[latKey]) || null,
     lng:         parseFloat(row[lngKey]) || null,
