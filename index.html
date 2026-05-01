@@ -1230,11 +1230,30 @@ function setQuestion(btn) {
 function buildContext() {
   if (!allIncidents || allIncidents.length === 0) return 'データなし';
   const total = allIncidents.length;
-  const electric = allIncidents.filter(r => r.causeType === '電気系統').length;
-  const other    = allIncidents.filter(r => r.causeType === 'その他').length;
-  const unknown  = allIncidents.filter(r => r.causeType === '不明').length;
-  const count2025 = allIncidents.filter(r => r.date && r.date.includes('2025')).length;
-  const count2026 = allIncidents.filter(r => r.date && r.date.includes('2026')).length;
+
+  // 年別・原因別集計
+  const years = ['2025', '2026'];
+  const causes = ['電気系統', 'その他', '不明'];
+  let yearCauseSummary = '';
+  years.forEach(yr => {
+    const yrData = allIncidents.filter(r => r.date && r.date.includes(yr));
+    if (yrData.length === 0) return;
+    yearCauseSummary += `
+【${yr}年】合計${yrData.length}件
+`;
+    causes.forEach(c => {
+      const cData = yrData.filter(r => r.causeType === c);
+      if (cData.length > 0) {
+        yearCauseSummary += `  - ${c}: ${cData.length}件
+`;
+        // 詳細（地域・日付）
+        cData.forEach(r => {
+          yearCauseSummary += `    ・${r.date} ${r.region} 原因詳細:${r.causeDetail || '不明'}
+`;
+        });
+      }
+    });
+  });
 
   // 地域別集計
   const regionCount = {};
@@ -1246,12 +1265,23 @@ function buildContext() {
     .sort((a,b) => b[1]-a[1]).slice(0,5)
     .map(([r,c]) => `${r}:${c}件`).join('、');
 
+  // 全インシデント一覧（要約付き）
+  const incidentList = allIncidents.map(r =>
+    `・${r.date} [${r.causeType}] ${r.region} - ${(r.summary||'').substring(0,80)}`
+  ).join('
+');
+
   return `
-- ニュース検出工場火災総件数: ${total}件
-- 2025年: ${count2025}件、2026年: ${count2026}件
-- 原因別: 電気系統${electric}件、その他${other}件、不明${unknown}件
-- 火災が多い地域TOP5: ${topRegions}
-- 最新3件: ${allIncidents.slice(-3).map(r => `${r.date} ${r.region}(${r.causeType})`).join(' / ')}
+=== ニュース検出工場火災データ（総件数: ${total}件）===
+
+【年別・原因別内訳】
+${yearCauseSummary}
+
+【火災が多い地域TOP5】
+${topRegions}
+
+【全インシデント一覧】
+${incidentList}
   `;
 }
 
