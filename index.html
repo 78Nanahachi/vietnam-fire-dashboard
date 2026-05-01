@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ベトナム工場火災モニタリング</title>
+<title>ベトナム工場火災ニュース v.04</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -398,7 +398,7 @@
   <div class="header-left">
     <span class="fire-icon">🔥</span>
     <div class="header-title">
-      <h1>ベトナム工場火災モニタリング</h1>
+      <h1>ベトナム工場火災ニュース v.04</h1>
       <p>Fire at Factories in Vietnam — Weekly Auto-Monitoring</p>
     </div>
   </div>
@@ -419,15 +419,57 @@
     <span>⚠ 注意：</span>検索でヒットしたニュースを自動カウントしています。同じ火災でも別のニュースソースだと別件として扱い、重複カウントされる場合があります。月次統計数値は参考値です。
   </div>
 
+  <!-- 官公庁統計パネル -->
+  <div class="official-stats-panel" id="officialStatsPanel" style="display:none;">
+    <div class="panel" style="margin-bottom:20px;">
+      <div class="panel-header">
+        <span class="panel-title">🏛 官公庁統計（ベトナム公安消防警察局）<span id="officialMonth" style="font-weight:normal;color:var(--text-muted);margin-left:8px;font-size:11px;"></span></span>
+        <a id="officialReportUrl" href="#" target="_blank" style="font-size:11px;color:var(--accent2);">レポートを開く →</a>
+      </div>
+      <div class="panel-body">
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;">
+          <div style="text-align:center;">
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">全国火災総数</div>
+            <div style="font-size:28px;font-weight:700;font-family:'DM Mono',monospace;color:var(--electric);" id="statTotalFires">—</div>
+            <div style="font-size:10px;color:var(--text-muted);">件</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">工場・倉庫火災</div>
+            <div style="font-size:28px;font-weight:700;font-family:'DM Mono',monospace;color:var(--accent3);" id="statIndustrial">—</div>
+            <div style="font-size:10px;color:var(--text-muted);">件</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">死者</div>
+            <div style="font-size:28px;font-weight:700;font-family:'DM Mono',monospace;color:var(--text-muted);" id="statDeaths">—</div>
+            <div style="font-size:10px;color:var(--text-muted);">名</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">負傷者</div>
+            <div style="font-size:28px;font-weight:700;font-family:'DM Mono',monospace;color:var(--text-muted);" id="statInjuries">—</div>
+            <div style="font-size:10px;color:var(--text-muted);">名</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">財産被害</div>
+            <div style="font-size:28px;font-weight:700;font-family:'DM Mono',monospace;color:var(--text-muted);" id="statDamage">—</div>
+            <div style="font-size:10px;color:var(--text-muted);">億VND</div>
+          </div>
+        </div>
+        <div style="margin-top:10px;font-size:11px;color:var(--text-muted);border-top:1px solid var(--border);padding-top:8px;">
+          ※ 工場・倉庫火災件数が記載されていない月はnullと表示されます
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- KPI Cards -->
   <div class="kpi-grid" id="kpiGrid">
     <div class="kpi-card red">
-      <div class="kpi-label">2025年 工場火災件数</div>
+      <div class="kpi-label">2025年 ニュース検出件数</div>
       <div class="kpi-value" id="kpi2025">—</div>
       <div class="kpi-sub">件</div>
     </div>
     <div class="kpi-card blue">
-      <div class="kpi-label">2026年 工場火災件数</div>
+      <div class="kpi-label">2026年 ニュース検出件数</div>
       <div class="kpi-value" id="kpi2026">—</div>
       <div class="kpi-sub">件</div>
     </div>
@@ -527,7 +569,7 @@
 </main>
 
 <footer>
-  <div>🔥 ベトナム工場火災モニタリング v.03 &nbsp;|&nbsp; <span style="font-family:'Times New Roman',serif; font-weight:bold; font-style:italic;">@ Itakkaskamuy</span></div>
+  <div>🔥 ベトナム工場火災ニュース v.04 &nbsp;|&nbsp; <span style="font-family:'Times New Roman',serif; font-weight:bold; font-style:italic;">@ Itakkaskamuy</span></div>
   <div id="footerStats">データ読み込み中...</div>
 </footer>
 
@@ -537,7 +579,19 @@
 // ============================================================
 const SPREADSHEET_ID = '1_KGFXvrcPmn9tRWvhidGZp0MsLtELZ0FkqRDXFyNyZo';
 const SHEET_NAME = 'LIST';
-const GID = '0'; // LISTシートのgid（必要に応じて変更）
+const STATS_SHEET_NAME = 'STATS';
+const GID = '0';
+
+// ============================================================
+// STATSシート読み込み
+// ============================================================
+async function loadStatsData() {
+  const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(STATS_SHEET_NAME)}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error('STATSシート読み込み失敗');
+  const csv = await res.text();
+  return parseCSV(csv);
+}
 
 // ============================================================
 // データ読み込み（Google Sheets公開CSV）
@@ -675,7 +729,7 @@ function mapRow(row) {
     causeType:   getField(row, ['原因', '原因区分']),
     causeDetail: getField(row, ['原因補足', '原因詳細']),
     summary:     row[summaryKey] || getField(row, ['要約', '要 約', '要　約']),
-    url:         extractUrl(getField(row, ['LINK', 'リンク', 'url'])),
+    url:         getField(row, ['記事URL', 'S']) || extractUrl(getField(row, ['LINK', 'リンク', 'url'])),
     source:      getField(row, ['情報源']),
     lat:         parseFloat(row[latKey]) || null,
     lng:         parseFloat(row[lngKey]) || null,
@@ -890,6 +944,27 @@ async function init() {
     allIncidents = raw
       .map(mapRow)
       .filter(r => r.region && r.region !== '該当なし' && r.region !== '');
+
+    // 官公庁統計を読み込む（STATSシート）
+    try {
+      const statsData = await loadStatsData();
+      if (statsData && statsData.length > 0) {
+        const latest = statsData[statsData.length - 1];
+        document.getElementById('officialStatsPanel').style.display = 'block';
+        document.getElementById('officialMonth').textContent = latest['対象月'] || '';
+        document.getElementById('statTotalFires').textContent = latest['全国火災総数'] || '—';
+        document.getElementById('statIndustrial').textContent = latest['工場・倉庫火災'] || '—';
+        document.getElementById('statDeaths').textContent = latest['死者'] || '—';
+        document.getElementById('statInjuries').textContent = latest['負傷者'] || '—';
+        document.getElementById('statDamage').textContent = latest['財産被害(億VND)'] || '—';
+        const reportUrl = latest['レポートURL'];
+        if (reportUrl) {
+          document.getElementById('officialReportUrl').href = reportUrl;
+        }
+      }
+    } catch(e) {
+      console.log('STATSデータ読み込みスキップ:', e.message);
+    }
 
     // KPI
     const kpis = calcKPIs(allIncidents);
