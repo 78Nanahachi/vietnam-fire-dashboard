@@ -412,10 +412,7 @@
       font-size: 12px;
       width: 100%;
     }
-    /* beforeラベルを非表示にしてグリッドレイアウトで代替 */
     tbody td:before { display: none; }
-
-    /* 発信日・地域・原因を横並びに */
     tbody td:nth-child(1) {
       font-size: 11px;
       color: var(--text-muted);
@@ -510,7 +507,6 @@
             <div style="font-size:10px;color:var(--text-muted);">億VND</div>
           </div>
         </div>
-        <!-- 原因別件数（2025年合計） -->
         <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
           <div style="text-align:center;background:rgba(230,57,70,0.1);border-radius:6px;padding:8px;">
             <div style="font-size:10px;color:var(--text-muted);">電気系統</div>
@@ -559,7 +555,6 @@
             <div style="font-size:10px;color:var(--text-muted);">億VND</div>
           </div>
         </div>
-        <!-- 原因別件数（2026年累計） -->
         <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
           <div style="text-align:center;background:rgba(230,57,70,0.1);border-radius:6px;padding:8px;">
             <div style="font-size:10px;color:var(--text-muted);">電気系統</div>
@@ -608,7 +603,6 @@
             <div style="font-size:10px;color:var(--text-muted);">億VND</div>
           </div>
         </div>
-        <!-- 原因別件数（最新月のみ） -->
         <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(3,1fr);gap:8px;" id="latestCausePanel">
           <div style="text-align:center;background:rgba(230,57,70,0.1);border-radius:6px;padding:8px;">
             <div style="font-size:10px;color:var(--text-muted);">電気系統</div>
@@ -743,6 +737,7 @@
       </table>
     </div>
   </div>
+
   <!-- チャット欄 -->
   <div class="table-section panel" style="margin-top:24px;">
     <div class="panel-header">
@@ -750,8 +745,6 @@
       <span style="font-size:11px;color:var(--text-muted);">Powered by Gemini</span>
     </div>
     <div style="padding:16px 20px;">
-
-      <!-- チャット履歴 -->
       <div id="chatHistory" style="
         min-height:120px;
         max-height:320px;
@@ -768,8 +761,6 @@
           </div>
         </div>
       </div>
-
-      <!-- 入力欄 -->
       <div style="display:flex;gap:8px;align-items:flex-end;">
         <textarea id="chatInput"
           placeholder="質問を入力してください..."
@@ -804,14 +795,11 @@
           transition:opacity 0.2s;
         ">送信</button>
       </div>
-
-      <!-- サジェスト -->
       <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;">
         <button onclick="setQuestion(this)" class="suggest-btn">2025年の火災件数合計は？</button>
         <button onclick="setQuestion(this)" class="suggest-btn">電気系統が原因の火災はどこで多い？</button>
         <button onclick="setQuestion(this)" class="suggest-btn">最近の火災の傾向は？</button>
       </div>
-
     </div>
   </div>
 
@@ -826,10 +814,42 @@
 // ============================================================
 // 設定
 // ============================================================
-var SPREADSHEET_ID = '1_KGFXvrcPmn9tRWvhidGZp0MsLtELZ0FkqRDXFyNyZo';
-var SHEET_NAME = 'LIST';
+var SPREADSHEET_ID = '1jGre5314DttRSk2_xXVlFc0XxgroxKJMOVonhSTaLu0'; // ← 新しいスプレッドシートID
+var SHEET_NAME = 'List';
 var STATS_SHEET_NAME = 'STATS';
 var GAS_PROXY_URL = 'https://script.google.com/macros/s/AKfycbyG_sD8FnxneqnMxYRpF66cBoT8m-7w0H6znlZHuGGJm4USF7nsyHzZEPeqspoJI8E/exec';
+
+// ============================================================
+// 日付パース（最新順ソート用）
+// ============================================================
+/**
+ * 日本語・英語・スラッシュ・ハイフン等の各種フォーマットに対応して
+ * Date オブジェクトに変換する。パース不能な場合は epoch(0) を返す。
+ * 対応例: "2025/05/12", "2025-05-12", "2025年5月12日",
+ *         "May 12, 2025", "12/05/2025" など
+ */
+function parseDate(str) {
+  if (!str) return new Date(0);
+  var s = str.trim();
+
+  // YYYY/MM/DD または YYYY-MM-DD
+  var m = s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+  if (m) return new Date(parseInt(m[1]), parseInt(m[2]) - 1, parseInt(m[3]));
+
+  // YYYY年M月D日
+  m = s.match(/^(\d{4})年\s*(\d{1,2})月\s*(\d{1,2})日/);
+  if (m) return new Date(parseInt(m[1]), parseInt(m[2]) - 1, parseInt(m[3]));
+
+  // MM/DD/YYYY
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (m) return new Date(parseInt(m[3]), parseInt(m[1]) - 1, parseInt(m[2]));
+
+  // 英語月名 (e.g. "May 12, 2025" / "12 May 2025")
+  var d = new Date(s);
+  if (!isNaN(d.getTime())) return d;
+
+  return new Date(0);
+}
 
 // ============================================================
 // CSV パーサー
@@ -1200,7 +1220,6 @@ function buildContext() {
     lines.push('・' + r.date + ' [' + r.causeType + '] ' + r.region + ' - ' + (r.summary || '').substring(0, 80));
   });
 
-  // STATSデータを追加
   if (allStatsData && allStatsData.length > 0) {
     lines.push('');
     lines.push('=== 官公庁統計データ（ベトナム公安消防警察局）===');
@@ -1288,7 +1307,6 @@ function renderOfficialStats(statsData) {
   document.getElementById('stat2025Industrial').textContent  = fmtNum(sumCol(rows2025, '工場・倉庫火災'));
   document.getElementById('stat2025Deaths').textContent      = fmtNum(sumCol(rows2025, '死者'));
   document.getElementById('stat2025Damage').textContent      = fmtDec(sumCol(rows2025, '財産被害(億VND)'));
-  // 2025年原因別合計
   var e2025 = sumCol(rows2025, '原因:電気系統');
   var o2025 = sumCol(rows2025, '原因:その他');
   var u2025 = sumCol(rows2025, '原因:不明');
@@ -1303,7 +1321,6 @@ function renderOfficialStats(statsData) {
   document.getElementById('stat2026Industrial').textContent  = fmtNum(sumCol(rows2026, '工場・倉庫火災'));
   document.getElementById('stat2026Deaths').textContent      = fmtNum(sumCol(rows2026, '死者'));
   document.getElementById('stat2026Damage').textContent      = fmtDec(sumCol(rows2026, '財産被害(億VND)'));
-  // 2026年原因別累計
   var e2026 = sumCol(rows2026, '原因:電気系統');
   var o2026 = sumCol(rows2026, '原因:その他');
   var u2026 = sumCol(rows2026, '原因:不明');
@@ -1327,7 +1344,6 @@ function renderOfficialStats(statsData) {
   var reportUrl = latest['レポートURL'];
   if (reportUrl) document.getElementById('officialReportUrl').href = reportUrl;
 
-  // 最新月の原因別件数
   var elec    = latest['原因:電気系統'];
   var oth     = latest['原因:その他'];
   var unk     = latest['原因:不明'];
@@ -1350,6 +1366,11 @@ async function init() {
     allIncidents = raw
       .map(mapRow)
       .filter(function(r) { return r.region && r.region !== '該当なし' && r.region !== ''; });
+
+    // ★ 最新記事を最上段に表示するため、日付の降順（新しい順）でソート
+    allIncidents.sort(function(a, b) {
+      return parseDate(b.date) - parseDate(a.date);
+    });
 
     var kpis = calcKPIs(allIncidents);
     document.getElementById('kpi2025').textContent     = kpis.count2025;
