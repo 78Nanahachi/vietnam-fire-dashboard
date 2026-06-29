@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ベトナム工場火災ニュース v.04</title>
+<title>ベトナム工場火災ニュース v.05</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -134,7 +134,7 @@
   <div class="header-left">
     <span class="fire-icon">🔥</span>
     <div class="header-title">
-      <h1>ベトナム工場火災ニュース v.04</h1>
+      <h1>ベトナム工場火災ニュース v.05</h1>
       <p>Fire at Factories in Vietnam — Weekly Auto-Monitoring</p>
     </div>
   </div>
@@ -303,7 +303,7 @@
 </main>
 
 <footer>
-  <div>🔥 ベトナム工場火災ニュース v.04 &nbsp;|&nbsp; <span style="font-family:'Times New Roman',serif;font-weight:bold;font-style:italic;">@ Itakkaskamuy</span></div>
+  <div>🔥 ベトナム工場火災ニュース v.05 &nbsp;|&nbsp; <span style="font-family:'Times New Roman',serif;font-weight:bold;font-style:italic;">@ Itakkaskamuy</span></div>
   <div id="footerStats">データ読み込み中...</div>
 </footer>
 
@@ -455,6 +455,9 @@ function getField(row, candidates) {
 }
 
 // ★ 修正3: mapRow — フィールド候補を拡張 ＋ 部分一致フォールバック
+// ★ 修正6(v.05): 配信日が空の行は「検索日」を最終フォールバックとして使用
+//    （配信日が空のままだと、バーグラフが年別に振り分けられず
+//    KPIカード・円グラフ（日付を見ない集計）と件数が食い違うため）
 function mapRow(row) {
   var keys=Object.keys(row);
 
@@ -481,7 +484,10 @@ function mapRow(row) {
   if(urlVal&&urlVal.indexOf('http')!==0) urlVal='';
 
   return {
-    date:        findKey(['ニュース発信日','配信日','発信日','日付','date','DATE'], ['発信日','配信日','日付','date']),
+    // ★v.05: '検索日'を末尾に追加。配信日が空欄の行も、必ず入っている
+    // 検索日（その週の実行日）を代わりに使うことで、年別グラフから
+    // 漏れなくなる（厳密な発生日ではない点に注意）
+    date:        findKey(['ニュース発信日','配信日','発信日','日付','date','DATE','検索日'], ['発信日','配信日','日付','date']),
     region:      findKey(['場所','発生地域','地域','Location','location'], ['場所','地域','発生']),
     causeType:   findKey(['原因','原因区分','causeType'], ['原因']),
     causeDetail: findKey(['原因補足','原因詳細','causeDetail'], ['原因補足','原因詳細']),
