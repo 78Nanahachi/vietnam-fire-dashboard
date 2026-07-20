@@ -345,7 +345,7 @@ function looksLikeVersion(s) {
 
 // 情報源1: GAS Web App（ファイル名由来）
 async function loadVersionFromGAS() {
-  var res = await fetch(GAS_PROXY_URL, { redirect: 'follow' });
+  var res = await fetch(GAS_PROXY_URL + '?mode=version', { redirect: 'follow' });
   if (!res.ok) throw new Error('HTTP ' + res.status);
   var data = await res.json();
   if (looksLikeVersion(data.version)) return data.version.trim();
