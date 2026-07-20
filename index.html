@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ベトナム工場火災ニュース v.05</title>
+<title>ベトナム工場火災ニュース v4.6f</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -134,7 +134,7 @@
   <div class="header-left">
     <span class="fire-icon">🔥</span>
     <div class="header-title">
-      <h1>ベトナム工場火災ニュース v.05</h1>
+      <h1>ベトナム工場火災ニュース <span id="appVersionHeader">v4.6f</span></h1>
       <p>Fire at Factories in Vietnam — Weekly Auto-Monitoring</p>
     </div>
   </div>
@@ -303,7 +303,7 @@
 </main>
 
 <footer>
-  <div>🔥 ベトナム工場火災ニュース v.05 &nbsp;|&nbsp; <span style="font-family:'Times New Roman',serif;font-weight:bold;font-style:italic;">@ Itakkaskamuy</span></div>
+  <div>🔥 ベトナム工場火災ニュース <span id="appVersionFooter">v4.6f</span> &nbsp;|&nbsp; <span style="font-family:'Times New Roman',serif;font-weight:bold;font-style:italic;">@ Itakkaskamuy</span></div>
   <div id="footerStats">データ読み込み中...</div>
 </footer>
 
@@ -314,10 +314,87 @@
 var SPREADSHEET_ID = '1_KGFXvrcPmn9tRWvhidGZp0MsLtELZ0FkqRDXFyNyZo';
 var SHEET_NAME     = 'List';
 var STATS_SHEET    = 'STATS';
+var VERSION_SHEET  = 'VERSION';   // ★ バージョン管理シート名（A1セルに "v4.6f" のように記入）
+var FALLBACK_VERSION = 'v4.6f';   // ★ シートが読めない場合の表示
 var GAS_PROXY_URL  = 'https://script.google.com/macros/s/AKfycbyG_sD8FnxneqnMxYRpF66cBoT8m-7w0H6znlZHuGGJm4USF7nsyHzZEPeqspoJI8E/exec';
 
 // ============================================================
-// ★ 修正1: 日付パース — "Date(Y,M,D)" 形式にも対応
+// ★ v4.6f: バージョン表示の自動取得
+//
+//  【情報源の優先順位】
+//   1) GAS Web App (doGet) → スプレッドシートの「ファイル名」末尾のバージョン
+//      ※メール配信と同じ情報源。これが本命。GAS側に doGet を追加し再デプロイが必要
+//   2) VERSIONシートのA1セル（GASを触りたくない場合の代替手段）
+//   3) FALLBACK_VERSION（どちらも取得できない場合の固定表示）
+//
+//  ブラウザのJSからはスプレッドシートのファイル名を直接取得できないため
+//  （gviz APIはセル値しか返さない）、GASを経由する必要がある。
+// ============================================================
+function applyVersion(ver) {
+  document.title = 'ベトナム工場火災ニュース ' + ver;
+  var h = document.getElementById('appVersionHeader');
+  var f = document.getElementById('appVersionFooter');
+  if (h) h.textContent = ver;
+  if (f) f.textContent = ver;
+}
+
+// バージョン形式（v4.6f / v.05 / V1.2 等）かどうか判定
+function looksLikeVersion(s) {
+  return typeof s === 'string' && /^v\.?\s?\d/i.test(s.trim()) && s.trim().length <= 20;
+}
+
+// 情報源1: GAS Web App（ファイル名由来）
+async function loadVersionFromGAS() {
+  var res = await fetch(GAS_PROXY_URL, { redirect: 'follow' });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  var data = await res.json();
+  if (looksLikeVersion(data.version)) return data.version.trim();
+  // version が空でも appName（ファイル名）末尾から抽出を試みる
+  if (data.appName) {
+    var m = String(data.appName).match(/v\s*\.?\s*\d[\d.]*[a-z]?\s*$/i);
+    if (m) return m[0].trim();
+  }
+  throw new Error('GAS応答にバージョンが含まれていません');
+}
+
+// 情報源2: VERSIONシート A1:B10
+async function loadVersionFromSheet() {
+  var url = 'https://docs.google.com/spreadsheets/d/' + SPREADSHEET_ID
+          + '/gviz/tq?tqx=out:csv&sheet=' + encodeURIComponent(VERSION_SHEET)
+          + '&range=A1:B10';
+  var res = await fetch(url);
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  var text = await res.text();
+  // シートが存在しない場合gvizは先頭シートを返すため、形式一致で判定する
+  var cells = text.split(/[\r\n]+/).join(',').split(',');
+  for (var i = 0; i < cells.length; i++) {
+    var v = cells[i].trim().replace(/^"|"$/g, '').trim();
+    if (looksLikeVersion(v)) return v;
+  }
+  throw new Error('VERSIONシートに有効なバージョン値がありません');
+}
+
+async function loadVersion() {
+  try {
+    var v = await loadVersionFromGAS();
+    console.log('[version] GAS(ファイル名)から取得:', v);
+    return v;
+  } catch (e) {
+    console.log('[version] GASから取得できず:', e.message);
+  }
+  try {
+    var v2 = await loadVersionFromSheet();
+    console.log('[version] VERSIONシートから取得:', v2);
+    return v2;
+  } catch (e2) {
+    console.log('[version] シートから取得できず:', e2.message);
+  }
+  console.log('[version] 固定値を使用:', FALLBACK_VERSION);
+  return FALLBACK_VERSION;
+}
+
+// ============================================================
+// 日付パース — "Date(Y,M,D)" 形式にも対応
 // ============================================================
 function parseDate(str) {
   if (!str) return new Date(0);
@@ -400,7 +477,7 @@ async function loadData() {
   }
 }
 
-// ★ 修正2: parseGvizJSON — Date(Y,M,D) 形式を人間が読める日付文字列に変換
+// parseGvizJSON — Date(Y,M,D) 形式を人間が読める日付文字列に変換
 function parseGvizJSON(json) {
   var cols=(json.table.cols||[]).map(function(c){return c.label||'';});
   var rows=json.table.rows||[];
@@ -423,7 +500,7 @@ function parseGvizJSON(json) {
 
       var v=String(cell.v);
 
-      // ★ "Date(Y,M,D)" → "YYYY/MM/DD" に変換
+      // "Date(Y,M,D)" → "YYYY/MM/DD" に変換
       var gd=v.match(/^Date\((\d+),(\d+),(\d+)\)/);
       if(gd){
         var yr=parseInt(gd[1]), mo=parseInt(gd[2])+1, dy=parseInt(gd[3]);
@@ -454,10 +531,8 @@ function getField(row, candidates) {
   return '';
 }
 
-// ★ 修正3: mapRow — フィールド候補を拡張 ＋ 部分一致フォールバック
-// ★ 修正6(v.05): 配信日が空の行は「検索日」を最終フォールバックとして使用
-//    （配信日が空のままだと、バーグラフが年別に振り分けられず
-//    KPIカード・円グラフ（日付を見ない集計）と件数が食い違うため）
+// mapRow — フィールド候補を拡張 ＋ 部分一致フォールバック
+// 配信日が空の行は「検索日」を最終フォールバックとして使用
 function mapRow(row) {
   var keys=Object.keys(row);
 
@@ -473,7 +548,7 @@ function mapRow(row) {
 
   // 要約キー検索
   var summaryKey='要約';
-  keys.forEach(function(k){ if(k.replace(/\s|\u3000/g,'')==='要約') summaryKey=k; });
+  keys.forEach(function(k){ if(k.replace(/\s|　/g,'')==='要約') summaryKey=k; });
 
   // 緯度・経度キー検索
   var latKey=keys.find(function(k){return k.indexOf('緯度')>=0;})||'緯度';
@@ -484,7 +559,7 @@ function mapRow(row) {
   if(urlVal&&urlVal.indexOf('http')!==0) urlVal='';
 
   return {
-    // ★v.05: '検索日'を末尾に追加。配信日が空欄の行も、必ず入っている
+    // '検索日'を末尾に追加。配信日が空欄の行も、必ず入っている
     // 検索日（その週の実行日）を代わりに使うことで、年別グラフから
     // 漏れなくなる（厳密な発生日ではない点に注意）
     date:        findKey(['ニュース発信日','配信日','発信日','日付','date','DATE','検索日'], ['発信日','配信日','日付','date']),
@@ -759,11 +834,14 @@ function renderOfficialStats(statsData) {
 // メイン初期化
 // ============================================================
 async function init() {
+  // ★ バージョン表示（データ読み込みとは独立して先に反映）
+  loadVersion().then(applyVersion);
+
   try {
     var raw=await loadData();
     if(!raw||!raw.length) throw new Error('データが空です');
 
-    // ★ 修正4: filter 条件を緩和 — dateまたはregionがあれば表示
+    // filter 条件を緩和 — dateまたはregionがあれば表示
     //    (列名不一致で region='' になっても全件消えないよう)
     allIncidents=raw
       .map(mapRow)
@@ -776,7 +854,7 @@ async function init() {
     console.log('[init] total incidents after filter:', allIncidents.length);
     if(allIncidents.length>0) console.log('[init] sample:', allIncidents[0]);
 
-    // ★ 修正5: 日付降順ソート（最新記事を最上段に）
+    // 日付降順ソート（最新記事を最上段に）
     allIncidents.sort(function(a,b){ return parseDate(b.date)-parseDate(a.date); });
 
     var kpis=calcKPIs(allIncidents);
