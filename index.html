@@ -276,30 +276,6 @@
     </div>
   </div>
 
-  <!-- Chat -->
-  <div class="table-section panel" style="margin-top:24px;">
-    <div class="panel-header">
-      <span class="panel-title">💬 データについて質問する</span>
-      <span style="font-size:11px;color:var(--text-muted);">Powered by Gemini</span>
-    </div>
-    <div style="padding:16px 20px;">
-      <div id="chatHistory" style="min-height:120px;max-height:320px;overflow-y:auto;margin-bottom:12px;display:flex;flex-direction:column;gap:10px;">
-        <div class="chat-msg bot">
-          <div class="chat-bubble bot-bubble">こんにちは！ベトナム工場火災データについて何でも質問してください。<br>例：「2025年で火災が最も多かった月は？」「電気系統火災の傾向は？」</div>
-        </div>
-      </div>
-      <div style="display:flex;gap:8px;align-items:flex-end;">
-        <textarea id="chatInput" placeholder="質問を入力してください..." style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:10px 14px;font-family:'Noto Sans JP',sans-serif;font-size:13px;resize:none;height:44px;max-height:120px;outline:none;line-height:1.5;" rows="1"></textarea>
-        <button id="chatSendBtn" onclick="sendChat()" style="background:var(--accent2);color:white;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-family:'Noto Sans JP',sans-serif;cursor:pointer;height:44px;white-space:nowrap;transition:opacity .2s;">送信</button>
-      </div>
-      <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap;">
-        <button onclick="setQuestion(this)" class="suggest-btn">2025年の火災件数合計は？</button>
-        <button onclick="setQuestion(this)" class="suggest-btn">電気系統が原因の火災はどこで多い？</button>
-        <button onclick="setQuestion(this)" class="suggest-btn">最近の火災の傾向は？</button>
-      </div>
-    </div>
-  </div>
-
 </main>
 
 <footer>
@@ -311,24 +287,17 @@
 // ============================================================
 // 設定
 // ============================================================
-var SPREADSHEET_ID = '1_KGFXvrcPmn9tRWvhidGZp0MsLtELZ0FkqRDXFyNyZo';
-var SHEET_NAME     = 'List';
-var STATS_SHEET    = 'STATS';
-var VERSION_SHEET  = 'VERSION';   // ★ バージョン管理シート名（A1セルに "v4.6f" のように記入）
-var FALLBACK_VERSION = 'v4.6f';   // ★ シートが読めない場合の表示
-var GAS_PROXY_URL  = 'https://script.google.com/macros/s/AKfycbyG_sD8FnxneqnMxYRpF66cBoT8m-7w0H6znlZHuGGJm4USF7nsyHzZEPeqspoJI8E/exec';
+//  データは GAS が生成して GitHub に push した data.json から読み込む。
+//  スプレッドシートへの直接アクセス・GAS Web App への接続は一切行わない。
+// ============================================================
+var DATA_URL         = './data.json';
+var FALLBACK_VERSION = 'v4.6g';   // data.json に meta.version が無い場合の表示
 
 // ============================================================
-// ★ v4.6f: バージョン表示の自動取得
-//
-//  【情報源の優先順位】
-//   1) GAS Web App (doGet) → スプレッドシートの「ファイル名」末尾のバージョン
-//      ※メール配信と同じ情報源。これが本命。GAS側に doGet を追加し再デプロイが必要
-//   2) VERSIONシートのA1セル（GASを触りたくない場合の代替手段）
-//   3) FALLBACK_VERSION（どちらも取得できない場合の固定表示）
-//
-//  ブラウザのJSからはスプレッドシートのファイル名を直接取得できないため
-//  （gviz APIはセル値しか返さない）、GASを経由する必要がある。
+//  バージョン表示
+//  data.json の meta.version をそのまま表示する。
+//  meta.version は GAS 側でスプレッドシートのファイル名末尾から
+//  自動抽出されるため、メール配信の表示と常に一致する。
 // ============================================================
 function applyVersion(ver) {
   document.title = 'ベトナム工場火災ニュース ' + ver;
@@ -338,73 +307,14 @@ function applyVersion(ver) {
   if (f) f.textContent = ver;
 }
 
-// バージョン形式（v4.6f / v.05 / V1.2 等）かどうか判定
-function looksLikeVersion(s) {
-  return typeof s === 'string' && /^v\.?\s?\d/i.test(s.trim()) && s.trim().length <= 20;
-}
-
-// 情報源1: GAS Web App（ファイル名由来）
-async function loadVersionFromGAS() {
-  var res = await fetch(GAS_PROXY_URL + '?mode=version', { redirect: 'follow' });
-  if (!res.ok) throw new Error('HTTP ' + res.status);
-  var data = await res.json();
-  if (looksLikeVersion(data.version)) return data.version.trim();
-  // version が空でも appName（ファイル名）末尾から抽出を試みる
-  if (data.appName) {
-    var m = String(data.appName).match(/v\s*\.?\s*\d[\d.]*[a-z]?\s*$/i);
-    if (m) return m[0].trim();
-  }
-  throw new Error('GAS応答にバージョンが含まれていません');
-}
-
-// 情報源2: VERSIONシート A1:B10
-async function loadVersionFromSheet() {
-  var url = 'https://docs.google.com/spreadsheets/d/' + SPREADSHEET_ID
-          + '/gviz/tq?tqx=out:csv&sheet=' + encodeURIComponent(VERSION_SHEET)
-          + '&range=A1:B10';
-  var res = await fetch(url);
-  if (!res.ok) throw new Error('HTTP ' + res.status);
-  var text = await res.text();
-  // シートが存在しない場合gvizは先頭シートを返すため、形式一致で判定する
-  var cells = text.split(/[\r\n]+/).join(',').split(',');
-  for (var i = 0; i < cells.length; i++) {
-    var v = cells[i].trim().replace(/^"|"$/g, '').trim();
-    if (looksLikeVersion(v)) return v;
-  }
-  throw new Error('VERSIONシートに有効なバージョン値がありません');
-}
-
-async function loadVersion() {
-  try {
-    var v = await loadVersionFromGAS();
-    console.log('[version] GAS(ファイル名)から取得:', v);
-    return v;
-  } catch (e) {
-    console.log('[version] GASから取得できず:', e.message);
-  }
-  try {
-    var v2 = await loadVersionFromSheet();
-    console.log('[version] VERSIONシートから取得:', v2);
-    return v2;
-  } catch (e2) {
-    console.log('[version] シートから取得できず:', e2.message);
-  }
-  console.log('[version] 固定値を使用:', FALLBACK_VERSION);
-  return FALLBACK_VERSION;
-}
-
 // ============================================================
-// 日付パース — "Date(Y,M,D)" 形式にも対応
+// 日付パース（テーブル表示のソート補助用）
 // ============================================================
 function parseDate(str) {
   if (!str) return new Date(0);
   var s = str.trim();
 
-  // Google Sheets gviz が返す "Date(2025,4,12)" 形式（月は0始まり）
-  var gd = s.match(/^Date\((\d+),(\d+),(\d+)\)/);
-  if (gd) return new Date(parseInt(gd[1]), parseInt(gd[2]), parseInt(gd[3]));
-
-  // YYYY/MM/DD または YYYY-MM-DD
+  // YYYY/MM/DD または YYYY-MM-DD（GASが出力する標準形式）
   var m = s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
   if (m) return new Date(parseInt(m[1]), parseInt(m[2])-1, parseInt(m[3]));
 
@@ -422,154 +332,23 @@ function parseDate(str) {
 }
 
 // ============================================================
-// CSV パーサー（STATSシート用）
-// ============================================================
-function parseCSVLine(line) {
-  var result=[], current='', inQ=false;
-  for (var i=0;i<line.length;i++) {
-    var ch=line[i];
-    if (ch==='"'){if(inQ&&line[i+1]==='"'){current+='"';i++;}else inQ=!inQ;}
-    else if(ch===','&&!inQ){result.push(current);current='';}
-    else current+=ch;
-  }
-  result.push(current);
-  return result;
-}
-function parseCSV(csv) {
-  var NL='\n', records=[], current='', inQ=false;
-  for(var i=0;i<csv.length;i++){
-    var ch=csv[i];
-    if(ch==='"'){if(inQ&&csv[i+1]==='"'){current+='"';i++;}else inQ=!inQ;}
-    else if(ch===NL&&!inQ){records.push(current);current='';}
-    else current+=ch;
-  }
-  if(current.trim()) records.push(current);
-  if(records.length<2) return [];
-  var headers=parseCSVLine(records[0]);
-  var rows=[];
-  for(var i=1;i<records.length;i++){
-    if(!records[i].trim()) continue;
-    var vals=parseCSVLine(records[i]);
-    var row={};
-    headers.forEach(function(h,idx){
-      var key=h.trim().replace(/"/g,'');
-      var val=(vals[idx]||'').trim().replace(/^"|"$/g,'');
-      row[key]=val;
-    });
-    rows.push(row);
-  }
-  return rows;
-}
-
-// ============================================================
-// データ読み込み
+// データ読み込み（data.json 一本）
+//  返り値: { meta, items, stats }
+//  旧形式（配列のみ）でも壊れないよう後方互換を持たせている
 // ============================================================
 async function loadData() {
-  var url='https://docs.google.com/spreadsheets/d/'+SPREADSHEET_ID+'/gviz/tq?tqx=out:json&sheet='+encodeURIComponent(SHEET_NAME);
-  try {
-    var res=await fetch(url);
-    if(!res.ok) throw new Error('HTTP '+res.status);
-    var text=await res.text();
-    var json=JSON.parse(text.replace(/^[^(]+\(/,'').replace(/\);?$/,''));
-    return parseGvizJSON(json);
-  } catch(e) {
-    throw new Error('スプレッドシートの読み込みに失敗しました: '+e.message);
+  var res = await fetch(DATA_URL, { cache: 'no-cache' });
+  if (!res.ok) throw new Error('data.json の読み込みに失敗しました (HTTP ' + res.status + ')');
+
+  var raw = await res.json();
+
+  if (Array.isArray(raw)) {
+    return { meta: {}, items: raw, stats: [] };
   }
-}
-
-// parseGvizJSON — Date(Y,M,D) 形式を人間が読める日付文字列に変換
-function parseGvizJSON(json) {
-  var cols=(json.table.cols||[]).map(function(c){return c.label||'';});
-  var rows=json.table.rows||[];
-
-  // デバッグ：コンソールに列名を出力
-  console.log('[gviz] columns:', cols);
-  if(rows.length>0) console.log('[gviz] sample row:', rows[0]);
-
-  return rows.map(function(row){
-    var obj={};
-    cols.forEach(function(col,i){
-      var cell=row.c&&row.c[i];
-      if(!cell||cell.v===null||cell.v===undefined){obj[col]='';return;}
-
-      // URL付きセル
-      if(cell.p&&cell.p.url){obj[col]=cell.p.url;return;}
-
-      // フォーマット済み文字列があればそれを優先
-      if(cell.f){obj[col]=cell.f;return;}
-
-      var v=String(cell.v);
-
-      // "Date(Y,M,D)" → "YYYY/MM/DD" に変換
-      var gd=v.match(/^Date\((\d+),(\d+),(\d+)\)/);
-      if(gd){
-        var yr=parseInt(gd[1]), mo=parseInt(gd[2])+1, dy=parseInt(gd[3]);
-        obj[col]=yr+'/'+String(mo).padStart(2,'0')+'/'+String(dy).padStart(2,'0');
-        return;
-      }
-
-      obj[col]=v;
-    });
-    return obj;
-  });
-}
-
-async function loadStatsData() {
-  var url='https://docs.google.com/spreadsheets/d/'+SPREADSHEET_ID+'/gviz/tq?tqx=out:csv&sheet='+encodeURIComponent(STATS_SHEET);
-  var res=await fetch(url);
-  if(!res.ok) throw new Error('STATSシート読み込み失敗');
-  return parseCSV(await res.text());
-}
-
-// ============================================================
-// フィールド取得
-// ============================================================
-function getField(row, candidates) {
-  for(var i=0;i<candidates.length;i++){
-    if(row[candidates[i]]!==undefined&&row[candidates[i]]!=='') return row[candidates[i]];
-  }
-  return '';
-}
-
-// mapRow — フィールド候補を拡張 ＋ 部分一致フォールバック
-// 配信日が空の行は「検索日」を最終フォールバックとして使用
-function mapRow(row) {
-  var keys=Object.keys(row);
-
-  // 汎用フィールド検索（完全一致優先、なければ部分一致）
-  function findKey(candidates, partials) {
-    for(var i=0;i<candidates.length;i++) if(row[candidates[i]]!==undefined&&row[candidates[i]]!=='') return row[candidates[i]];
-    for(var i=0;i<partials.length;i++){
-      var k=keys.find(function(k){return k.indexOf(partials[i])>=0;});
-      if(k&&row[k]!=='') return row[k];
-    }
-    return '';
-  }
-
-  // 要約キー検索
-  var summaryKey='要約';
-  keys.forEach(function(k){ if(k.replace(/\s|　/g,'')==='要約') summaryKey=k; });
-
-  // 緯度・経度キー検索
-  var latKey=keys.find(function(k){return k.indexOf('緯度')>=0;})||'緯度';
-  var lngKey=keys.find(function(k){return k.indexOf('経度')>=0;})||'経度';
-
-  // URL検索（HYPERLINK関数で cell.p.url に入るケースも考慮済み）
-  var urlVal = findKey(['記事URL','URL','url','LINK','link','リンク'], ['URL','url','LINK','link','リンク','記事']);
-  if(urlVal&&urlVal.indexOf('http')!==0) urlVal='';
-
   return {
-    // '検索日'を末尾に追加。配信日が空欄の行も、必ず入っている
-    // 検索日（その週の実行日）を代わりに使うことで、年別グラフから
-    // 漏れなくなる（厳密な発生日ではない点に注意）
-    date:        findKey(['ニュース発信日','配信日','発信日','日付','date','DATE','検索日'], ['発信日','配信日','日付','date']),
-    region:      findKey(['場所','発生地域','地域','Location','location'], ['場所','地域','発生']),
-    causeType:   findKey(['原因','原因区分','causeType'], ['原因']),
-    causeDetail: findKey(['原因補足','原因詳細','causeDetail'], ['原因補足','原因詳細']),
-    summary:     row[summaryKey]||'',
-    url:         urlVal,
-    lat:         parseFloat(row[latKey])||null,
-    lng:         parseFloat(row[lngKey])||null,
+    meta:  raw.meta  || {},
+    items: raw.items || [],
+    stats: raw.stats || []
   };
 }
 
@@ -723,139 +502,75 @@ function filterTable(cause,btn) {
 }
 
 // ============================================================
-// チャット
-// ============================================================
-function setQuestion(btn){ document.getElementById('chatInput').value=btn.textContent; document.getElementById('chatInput').focus(); }
-
-var allStatsData=[];
-
-function buildContext() {
-  if(!allIncidents||!allIncidents.length) return 'データなし';
-  var NL='\n', lines=[];
-  lines.push('ニュース検出工場火災データ（総件数: '+allIncidents.length+'件）');
-  ['2025','2026'].forEach(function(yr){
-    var yrData=allIncidents.filter(function(r){return r.date&&r.date.indexOf(yr)>=0;});
-    if(!yrData.length) return;
-    lines.push('【'+yr+'年】合計'+yrData.length+'件');
-    ['電気系統','その他','不明'].forEach(function(c){
-      var cd=yrData.filter(function(r){return r.causeType===c;});
-      if(cd.length){
-        lines.push('  - '+c+': '+cd.length+'件');
-        cd.forEach(function(r){lines.push('    ・'+r.date+' '+r.region+' 原因:'+(r.causeDetail||'不明'));});
-      }
-    });
-    lines.push('');
-  });
-  var rc={};
-  allIncidents.forEach(function(r){var rg=(r.region||'不明').split('/')[0].trim();rc[rg]=(rc[rg]||0)+1;});
-  lines.push('【火災が多い地域TOP5】');
-  lines.push(Object.entries(rc).sort(function(a,b){return b[1]-a[1];}).slice(0,5).map(function(e){return e[0]+':'+e[1]+'件';}).join('、'));
-  lines.push('');
-  lines.push('【全インシデント一覧】');
-  allIncidents.forEach(function(r){lines.push('・'+r.date+' ['+r.causeType+'] '+r.region+' - '+(r.summary||'').substring(0,80));});
-  if(allStatsData&&allStatsData.length){
-    lines.push('');lines.push('=== 官公庁統計データ ===');
-    allStatsData.forEach(function(r){
-      var line='・'+(r['対象月']||'')+' 全国火災:'+(r['全国火災総数']||'—')+'件 工場倉庫:'+(r['工場・倉庫火災']||'—')+'件 死者:'+(r['死者']||'—')+'名';
-      if(r['原因:電気系統']) line+=' 電気系統:'+r['原因:電気系統']+'件';
-      if(r['原因:その他'])   line+=' その他:'+r['原因:その他']+'件';
-      if(r['原因:不明'])     line+=' 不明:'+r['原因:不明']+'件';
-      lines.push(line);
-    });
-  }
-  return lines.join(NL);
-}
-
-async function sendChat() {
-  var input=document.getElementById('chatInput');
-  var msg=input.value.trim(); if(!msg) return;
-  var history=document.getElementById('chatHistory');
-  var btn=document.getElementById('chatSendBtn');
-  history.innerHTML+='<div class="chat-msg user"><div class="chat-bubble user-bubble">'+msg+'</div></div>';
-  input.value=''; btn.disabled=true; btn.style.opacity='.5';
-  var tid='typing_'+Date.now();
-  history.innerHTML+='<div class="chat-msg bot" id="'+tid+'"><div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div>';
-  history.scrollTop=history.scrollHeight;
-  try {
-    var res=await fetch(GAS_PROXY_URL,{method:'POST',redirect:'follow',headers:{'Content-Type':'text/plain'},body:JSON.stringify({message:msg,context:buildContext()})});
-    var data=await res.json();
-    var reply=data.reply||data.error||'応答を取得できませんでした';
-    var el=document.getElementById(tid); if(el) el.remove();
-    history.innerHTML+='<div class="chat-msg bot"><div class="chat-bubble bot-bubble">'+reply.split('\n').join('<br>')+'</div></div>';
-  } catch(e) {
-    var el2=document.getElementById(tid); if(el2) el2.remove();
-    history.innerHTML+='<div class="chat-msg bot"><div class="chat-bubble bot-bubble" style="color:#ff6b75;">⚠ エラー: '+e.message+'</div></div>';
-  }
-  btn.disabled=false; btn.style.opacity='1'; history.scrollTop=history.scrollHeight;
-}
-
-// ============================================================
 // 官公庁統計
+//  data.json の stats 配列（英字キー）を描画する
 // ============================================================
 function renderOfficialStats(statsData) {
   if(!statsData||!statsData.length) return;
   document.getElementById('officialStatsPanel').style.display='block';
-  function sumCol(rows,col){return rows.reduce(function(acc,r){var v=parseFloat((r[col]||'').toString().replace(/,/g,''));return acc+(isNaN(v)?0:v);},0);}
-  function fmtNum(n){return n>0?Math.round(n).toLocaleString():'—';}
-  function fmtDec(n){return n>0?n.toFixed(2):'—';}
-  var r25=statsData.filter(function(r){return (r['対象月']||'').indexOf('2025')>=0;});
-  var r26=statsData.filter(function(r){return (r['対象月']||'').indexOf('2026')>=0;});
-  document.getElementById('stat2025Total').textContent      =fmtNum(sumCol(r25,'全国火災総数'));
-  document.getElementById('stat2025Industrial').textContent =fmtNum(sumCol(r25,'工場・倉庫火災'));
-  document.getElementById('stat2025Deaths').textContent     =fmtNum(sumCol(r25,'死者'));
-  document.getElementById('stat2025Damage').textContent     =fmtDec(sumCol(r25,'財産被害(億VND)'));
-  var e25=sumCol(r25,'原因:電気系統'),o25=sumCol(r25,'原因:その他'),u25=sumCol(r25,'原因:不明');
-  document.getElementById('stat2025Electric').textContent=e25>0?Math.round(e25).toLocaleString():'—';
-  document.getElementById('stat2025Other').textContent   =o25>0?Math.round(o25).toLocaleString():'—';
-  document.getElementById('stat2025Unknown').textContent =u25>0?Math.round(u25).toLocaleString():'—';
-  document.getElementById('stat2026Total').textContent      =fmtNum(sumCol(r26,'全国火災総数'));
-  document.getElementById('stat2026Industrial').textContent =fmtNum(sumCol(r26,'工場・倉庫火災'));
-  document.getElementById('stat2026Deaths').textContent     =fmtNum(sumCol(r26,'死者'));
-  document.getElementById('stat2026Damage').textContent     =fmtDec(sumCol(r26,'財産被害(億VND)'));
-  var e26=sumCol(r26,'原因:電気系統'),o26=sumCol(r26,'原因:その他'),u26=sumCol(r26,'原因:不明');
-  document.getElementById('stat2026Electric').textContent=e26>0?Math.round(e26).toLocaleString():'—';
-  document.getElementById('stat2026Other').textContent   =o26>0?Math.round(o26).toLocaleString():'—';
-  document.getElementById('stat2026Unknown').textContent =u26>0?Math.round(u26).toLocaleString():'—';
-  var sorted=statsData.slice().sort(function(a,b){return (b['対象月']||'').localeCompare(a['対象月']||'');});
-  var latest=sorted[0];
-  document.getElementById('officialMonth').textContent        =latest['対象月']||'';
-  document.getElementById('statLatestTotal').textContent      =fmtNum(parseFloat(latest['全国火災総数']||0));
-  document.getElementById('statLatestIndustrial').textContent =latest['工場・倉庫火災']||'—';
-  document.getElementById('statLatestDeaths').textContent     =latest['死者']||'—';
-  document.getElementById('statLatestDamage').textContent     =latest['財産被害(億VND)']||'—';
-  var ru=latest['レポートURL']; if(ru) document.getElementById('officialReportUrl').href=ru;
-  var elec=latest['原因:電気系統'],oth=latest['原因:その他'],unk=latest['原因:不明'];
-  document.getElementById('statLatestElectric').textContent=(elec&&elec!=='')?Math.round(parseFloat(elec)).toLocaleString():'—';
-  document.getElementById('statLatestOther').textContent  =(oth &&oth !=='')?Math.round(parseFloat(oth)).toLocaleString() :'—';
-  document.getElementById('statLatestUnknown').textContent=(unk &&unk !=='')?Math.round(parseFloat(unk)).toLocaleString() :'—';
+
+  function sumKey(rows,key){
+    return rows.reduce(function(acc,r){
+      var v=r[key];
+      return acc+(typeof v==='number'&&!isNaN(v)?v:0);
+    },0);
+  }
+  function fmtNum(n){ return n>0?Math.round(n).toLocaleString():'—'; }
+  function fmtDec(n){ return n>0?n.toFixed(2):'—'; }
+  function fmtCell(v){ return (typeof v==='number'&&v>0)?Math.round(v).toLocaleString():'—'; }
+
+  function fillYear(prefix, rows){
+    document.getElementById(prefix+'Total').textContent      =fmtNum(sumKey(rows,'totalFires'));
+    document.getElementById(prefix+'Industrial').textContent =fmtNum(sumKey(rows,'industrialFires'));
+    document.getElementById(prefix+'Deaths').textContent     =fmtNum(sumKey(rows,'deaths'));
+    document.getElementById(prefix+'Damage').textContent     =fmtDec(sumKey(rows,'damageBillionVND'));
+    document.getElementById(prefix+'Electric').textContent   =fmtNum(sumKey(rows,'causeElectric'));
+    document.getElementById(prefix+'Other').textContent      =fmtNum(sumKey(rows,'causeOther'));
+    document.getElementById(prefix+'Unknown').textContent    =fmtNum(sumKey(rows,'causeUnknown'));
+  }
+
+  fillYear('stat2025', statsData.filter(function(r){return (r.month||'').indexOf('2025')>=0;}));
+  fillYear('stat2026', statsData.filter(function(r){return (r.month||'').indexOf('2026')>=0;}));
+
+  // 最新月（GAS側で降順ソート済みだが念のため再ソート）
+  var latest=statsData.slice().sort(function(a,b){
+    return String(b.month||'').localeCompare(String(a.month||''));
+  })[0];
+
+  document.getElementById('officialMonth').textContent        =latest.month||'';
+  document.getElementById('statLatestTotal').textContent      =fmtCell(latest.totalFires);
+  document.getElementById('statLatestIndustrial').textContent =fmtCell(latest.industrialFires);
+  document.getElementById('statLatestDeaths').textContent     =fmtCell(latest.deaths);
+  document.getElementById('statLatestDamage').textContent     =fmtDec(latest.damageBillionVND||0);
+  document.getElementById('statLatestElectric').textContent   =fmtCell(latest.causeElectric);
+  document.getElementById('statLatestOther').textContent      =fmtCell(latest.causeOther);
+  document.getElementById('statLatestUnknown').textContent    =fmtCell(latest.causeUnknown);
+
+  if(latest.reportUrl) document.getElementById('officialReportUrl').href=latest.reportUrl;
 }
 
 // ============================================================
 // メイン初期化
 // ============================================================
 async function init() {
-  // ★ バージョン表示（データ読み込みとは独立して先に反映）
-  loadVersion().then(applyVersion);
-
   try {
-    var raw=await loadData();
-    if(!raw||!raw.length) throw new Error('データが空です');
+    var data = await loadData();
 
-    // filter 条件を緩和 — dateまたはregionがあれば表示
-    //    (列名不一致で region='' になっても全件消えないよう)
-    allIncidents=raw
-      .map(mapRow)
-      .filter(function(r){
-        // 「該当なし」は除外、それ以外はdateかregionのどちらかがあればOK
-        if(r.region==='該当なし') return false;
-        return r.date!==''||r.region!=='';
-      });
+    // ---- バージョン表示 ----
+    var ver = data.meta.version || FALLBACK_VERSION;
+    applyVersion(ver);
+    console.log('[version]', data.meta.version ? 'data.json から取得: '+ver : '固定値を使用: '+ver);
 
-    console.log('[init] total incidents after filter:', allIncidents.length);
-    if(allIncidents.length>0) console.log('[init] sample:', allIncidents[0]);
-
-    // 日付降順ソート（最新記事を最上段に）
+    // ---- インシデント ----
+    // GAS側で整形・ソート済みだが、念のため防御的にフィルタ・再ソートする
+    allIncidents = (data.items||[]).filter(function(r){
+      if(r.region==='該当なし') return false;
+      return (r.date&&r.date!=='')||(r.region&&r.region!=='');
+    });
     allIncidents.sort(function(a,b){ return parseDate(b.date)-parseDate(a.date); });
+
+    console.log('[init] incidents:', allIncidents.length, '/ stats:', (data.stats||[]).length);
+    if(allIncidents.length===0) throw new Error('データが空です');
 
     var kpis=calcKPIs(allIncidents);
     document.getElementById('kpi2025').textContent    =kpis.count2025;
@@ -871,15 +586,17 @@ async function init() {
     document.getElementById('incidentTable').style.display='table';
     renderTable(allIncidents);
 
-    var now=new Date();
-    document.getElementById('lastUpdated').textContent='更新: '+now.toLocaleDateString('ja-JP')+' '+now.toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'});
-    document.getElementById('footerStats').textContent='総件数: '+allIncidents.length+'件 | 2025年: '+kpis.count2025+'件 | 2026年: '+kpis.count2026+'件';
+    // ---- 更新日時はGASの生成時刻を表示（ページを開いた時刻ではない）----
+    document.getElementById('lastUpdated').textContent =
+      data.meta.generatedAt ? '更新: '+data.meta.generatedAt : '更新日時不明';
 
+    document.getElementById('footerStats').textContent =
+      '総件数: '+allIncidents.length+'件 | 2025年: '+kpis.count2025+'件 | 2026年: '+kpis.count2026+'件';
+
+    // ---- 官公庁統計 ----
     try {
-      var statsData=await loadStatsData();
-      allStatsData=statsData||[];
-      renderOfficialStats(statsData);
-    } catch(e){ console.log('STATSスキップ:',e.message); }
+      renderOfficialStats(data.stats||[]);
+    } catch(e){ console.log('統計パネルの描画をスキップ:', e.message); }
 
   } catch(e) {
     document.getElementById('tableLoading').style.display='none';
@@ -898,15 +615,6 @@ document.addEventListener('DOMContentLoaded',function(){
   var s=document.createElement('style');
   s.textContent='.leaflet-popup-content-wrapper{background:#111827!important;border:1px solid #1e2d45!important;border-radius:8px!important;box-shadow:0 4px 24px rgba(0,0,0,.6)!important}.leaflet-popup-tip{background:#111827!important}.leaflet-popup-content{margin:12px!important}.leaflet-container{font-family:sans-serif!important}';
   document.head.appendChild(s);
-  var input=document.getElementById('chatInput');
-  if(input){
-    var isC=false;
-    input.addEventListener('compositionstart',function(){isC=true;});
-    input.addEventListener('compositionend',function(){isC=false;});
-    input.addEventListener('keydown',function(e){
-      if(e.key==='Enter'&&!e.shiftKey&&!isC){e.preventDefault();sendChat();}
-    });
-  }
 });
 </script>
 </body>
