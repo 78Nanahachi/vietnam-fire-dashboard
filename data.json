@@ -1,7 +1,7 @@
 {
   "meta": {
     "version": "v5.0",
-    "generatedAt": "2026-09-07 04:58",
+    "generatedAt": "2026-09-14 04:57",
     "count": 55
   },
   "items": [
@@ -632,10 +632,10 @@
       "injuries": 5,
       "damageBillionVND": 67.18,
       "explosions": 1,
-      "industrialFires": 26,
+      "industrialFires": null,
       "causeElectric": 110,
-      "causeOther": 14,
-      "causeUnknown": 11,
+      "causeOther": 11,
+      "causeUnknown": 14,
       "reportUrl": "https://canhsatpccc.gov.vn/vi/news/thong-cao-bao-chi/thong-cao-bao-chi-ve-tinh-hinh-chay-no-va-cuu-nan-cuu-ho-thang-52026-5812"
     },
     {
