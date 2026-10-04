@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ベトナム工場火災ニュース v4.6f</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg:#0a0e1a; --surface:#111827; --surface2:#1a2235; --border:#1e2d45;
+    --text:#e8edf5; --text-muted:#6b7fa3; --accent:#e63946; --accent2:#457b9d;
+    --accent3:#f4a261; --electric:#e63946; --other:#2a9d8f; --unknown:#457b9d; --green:#2a9d8f;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+  header{background:var(--surface);border-bottom:1px solid var(--border);padding:20px 32px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+  .header-left{display:flex;align-items:center;gap:16px}
+  .fire-icon{font-size:28px}
+  .header-title h1{font-size:18px;font-weight:700;letter-spacing:.02em}
+  .header-title p{font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace;margin-top:2px}
+  .header-right{display:flex;align-items:center;gap:16px}
+  .status-badge{display:flex;align-items:center;gap:6px;background:rgba(42,157,143,.15);border:1px solid rgba(42,157,143,.4);color:var(--green);padding:6px 12px;border-radius:20px;font-size:11px;font-family:'DM Mono',monospace}
+  .status-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  .last-updated{font-size:11px;color:var(--text-muted);font-family:'DM Mono',monospace}
+  main{padding:24px 32px;max-width:1400px;margin:0 auto}
+  .notice{background:rgba(69,123,157,.1);border:1px solid rgba(69,123,157,.3);border-radius:8px;padding:10px 16px;font-size:12px;color:var(--text-muted);margin-bottom:24px}
+  .notice span{color:var(--accent2)}
+  .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+  .kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;position:relative;overflow:hidden;transition:border-color .2s}
+  .kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+  .kpi-card.red::before{background:var(--electric)}
+  .kpi-card.blue::before{background:var(--accent2)}
+  .kpi-card.orange::before{background:var(--accent3)}
+  .kpi-card.teal::before{background:var(--green)}
+  .kpi-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+  .kpi-value{font-size:40px;font-weight:700;font-family:'DM Mono',monospace;line-height:1}
+  .kpi-card.red .kpi-value{color:var(--electric)}
+  .kpi-card.blue .kpi-value{color:var(--accent2)}
+  .kpi-card.orange .kpi-value{color:var(--accent3)}
+  .kpi-card.teal .kpi-value{color:var(--green)}
+  .kpi-sub{font-size:11px;color:var(--text-muted);margin-top:6px}
+  .viz-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px}
+  .map-section{grid-column:1;grid-row:1/3}
+  .chart-section{grid-column:2}
+  .panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+  .panel-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .panel-title{font-size:13px;font-weight:700;letter-spacing:.04em}
+  .panel-body{padding:20px}
+  #map{height:420px;background:var(--surface2)}
+  .legend{display:flex;gap:16px;padding:12px 20px;border-top:1px solid var(--border);flex-wrap:wrap}
+  .legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted)}
+  .legend-dot{width:10px;height:10px;border-radius:50%}
+  .chart-container{position:relative;height:180px}
+  .filter-tabs{display:flex;gap:8px;flex-wrap:wrap}
+  .tab-btn{padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--text-muted);font-size:12px;cursor:pointer;transition:all .2s;font-family:'Noto Sans JP',sans-serif}
+  .tab-btn:hover{border-color:var(--accent2);color:var(--text)}
+  .tab-btn.active{background:var(--accent2);border-color:var(--accent2);color:white}
+  .tab-btn.electric.active{background:var(--electric);border-color:var(--electric)}
+  .tab-btn.other.active{background:var(--green);border-color:var(--green)}
+  .tab-btn.unknown.active{background:var(--unknown);border-color:var(--unknown)}
+  .table-section{margin-bottom:24px}
+  .table-wrapper{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  thead tr{background:var(--surface2);border-bottom:2px solid var(--border)}
+  th{padding:12px 16px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);font-weight:500;white-space:nowrap}
+  tbody tr{border-bottom:1px solid var(--border);transition:background .15s}
+  tbody tr:hover{background:var(--surface2)}
+  td{padding:12px 16px;vertical-align:top;line-height:1.5}
+  .cause-badge{display:inline-block;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:500;white-space:nowrap}
+  .cause-electric{background:rgba(230,57,70,.2);color:#ff6b75;border:1px solid rgba(230,57,70,.4)}
+  .cause-other{background:rgba(42,157,143,.2);color:#4ecdc4;border:1px solid rgba(42,157,143,.4)}
+  .cause-unknown{background:rgba(69,123,157,.2);color:#7bb3d4;border:1px solid rgba(69,123,157,.4)}
+  .link-btn{display:inline-flex;align-items:center;gap:4px;color:var(--accent2);text-decoration:none;font-size:11px;font-family:'DM Mono',monospace;border:1px solid rgba(69,123,157,.4);padding:3px 8px;border-radius:4px;transition:all .2s;white-space:nowrap}
+  .link-btn:hover{background:rgba(69,123,157,.2)}
+  .summary-cell{width:auto;min-width:320px}
+  .summary-text{color:var(--text-muted);font-size:11px;line-height:1.7}
+  .summary-label{color:var(--text);font-weight:500}
+  .date-cell{font-family:'DM Mono',monospace;color:var(--text-muted);white-space:nowrap}
+  .region-cell{font-weight:500;width:100px;min-width:80px;max-width:110px;word-break:break-all}
+  .loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px;color:var(--text-muted);gap:16px}
+  .spinner{width:32px;height:32px;border:2px solid var(--border);border-top-color:var(--accent2);border-radius:50%;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .error-msg{background:rgba(230,57,70,.1);border:1px solid rgba(230,57,70,.3);border-radius:8px;padding:16px 20px;color:#ff6b75;font-size:13px;margin:16px 0}
+  footer{border-top:1px solid var(--border);padding:20px 32px;display:flex;align-items:center;justify-content:space-between;color:var(--text-muted);font-size:11px;font-family:'DM Mono',monospace}
+  .chat-msg{display:flex} .chat-msg.user{justify-content:flex-end}
+  .chat-bubble{max-width:80%;padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.6}
+  .bot-bubble{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:4px 12px 12px 12px}
+  .user-bubble{background:var(--accent2);color:white;border-radius:12px 4px 12px 12px}
+  .suggest-btn{background:transparent;border:1px solid var(--border);color:var(--text-muted);padding:4px 10px;border-radius:16px;font-size:11px;cursor:pointer;font-family:'Noto Sans JP',sans-serif;transition:all .2s}
+  .suggest-btn:hover{border-color:var(--accent2);color:var(--text)}
+  .typing-indicator{display:flex;gap:4px;align-items:center;padding:10px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:4px 12px 12px 12px;width:fit-content}
+  .typing-dot{width:6px;height:6px;background:var(--text-muted);border-radius:50%;animation:typingBounce 1.2s infinite}
+  .typing-dot:nth-child(2){animation-delay:.2s} .typing-dot:nth-child(3){animation-delay:.4s}
+  @keyframes typingBounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
+  @media(max-width:900px){
+    main{padding:16px} .kpi-grid{grid-template-columns:repeat(2,1fr)}
+    .viz-grid{grid-template-columns:1fr} .map-section{grid-column:1;grid-row:auto}
+    .chart-section{grid-column:1} header{padding:16px} #map{height:320px} .chart-container{height:220px}
+  }
+  @media(max-width:600px){
+    body{font-size:13px} header{padding:12px 16px} .fire-icon{font-size:22px}
+    .header-title h1{font-size:14px} .header-title p{display:none} .status-badge{display:none}
+    main{padding:12px;max-width:100%;overflow-x:hidden}
+    .kpi-grid{grid-template-columns:repeat(2,1fr);gap:10px;width:100%}
+    .kpi-card{padding:14px} .kpi-value{font-size:28px} .kpi-label{font-size:10px}
+    .viz-grid{display:flex;flex-direction:column;gap:12px;width:100%}
+    .map-section,.chart-section,.panel{width:100%} .chart-section{grid-column:auto}
+    #map{height:280px;width:100%} .chart-container{height:200px;width:100%}
+    .panel-header{padding:12px 14px;flex-direction:column;align-items:flex-start;gap:8px}
+    .panel-body{padding:12px} .tab-btn{padding:5px 10px;font-size:11px}
+    .notice{font-size:11px;padding:8px 12px}
+    footer{flex-direction:column;gap:4px;padding:12px 16px;text-align:center}
+    table,thead,tbody,th,td,tr{display:block} thead{display:none}
+    tbody tr{border:1px solid var(--border);border-radius:8px;margin-bottom:12px;padding:14px;background:var(--surface2)}
+    tbody td{padding:3px 0;border:none;font-size:12px;width:100%}
+    tbody td:before{display:none}
+    tbody td:nth-child(1){font-size:11px;color:var(--text-muted);font-family:"DM Mono",monospace;margin-bottom:4px}
+    tbody td:nth-child(2){font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px;width:100%;word-break:keep-all}
+    tbody td:nth-child(3){margin-bottom:8px} tbody td:nth-child(4){display:none}
+    tbody td:nth-child(5){margin-top:8px;border-top:1px solid var(--border);padding-top:10px;font-size:12px;line-height:1.7;color:var(--text-muted);width:100%}
+    tbody td:nth-child(6){margin-top:8px}
+    .summary-cell{max-width:100%} .summary-text{font-size:12px} .date-cell{white-space:normal}
+    .region-cell{width:100%!important;max-width:100%} table{border:none} colgroup{display:none}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <span class="fire-icon">🔥</span>
+    <div class="header-title">
+      <h1>ベトナム工場火災ニュース <span id="appVersionHeader">v4.6f</span></h1>
+      <p>Fire at Factories in Vietnam — Weekly Auto-Monitoring</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="status-badge"><div class="status-dot"></div>LIVE DATA</div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;">
+      <div class="last-updated" id="lastUpdated">読み込み中...</div>
+      <div style="font-family:'Times New Roman',serif;font-weight:bold;font-style:italic;font-size:11px;color:#6b7fa3;">@ Itakkaskamuy</div>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- 官公庁統計パネル -->
+  <div id="officialStatsPanel" style="display:none;margin-bottom:24px;">
+    <div style="padding:14px 20px;background:var(--surface);border:1px solid var(--border);border-radius:12px 12px 0 0;display:flex;align-items:center;justify-content:space-between;">
+      <span class="panel-title">🏛 全国火災統計（ベトナム公安消防警察局）</span>
+      <a id="officialReportUrl" href="#" target="_blank" style="font-size:11px;color:var(--accent2);">最新レポートを開く →</a>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-top:none;border-radius:0 0 12px 12px;overflow:hidden;">
+      <div style="background:var(--surface);padding:20px;">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:14px;display:flex;align-items:center;gap:6px;">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#457b9d;"></span>2025年 合計
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div><div style="font-size:10px;color:var(--text-muted);">全国火災</div><div style="font-size:26px;font-weight:700;font-family:'DM Mono',monospace;color:var(--accent2);" id="stat2025Total">—</div><div style="font-size:10px;color:var(--text-muted);">件</div></div>
+          <div><div style="font-size:10px;color:var(--text-muted);">工場・倉庫</div><div style="font-size:26px;font-weight:700;font-family:'DM Mono',monospace;color:var(--accent2);" id="stat2025Industrial">—</div><div style="font-size:10px;color:var(--text-muted);">件</div></div>
+          <div><div style="font-size:10px;color:var(--text-muted);">死者</div><div style="font-size:22px;font-weight:700;font-family:'DM Mono',monospace;color:var(--text-muted);" id="stat2025Deaths">—</div><div style="font-size:10px;color:var(--text-muted);">名</div></div>
+          <div><div style="font-size:10px;color:var(--text-muted);">財産被害</div><div style="font-size:22px;font-weight:700;font-family:'DM Mono',monospace;color:var(--text-muted);" id="stat2025Damage">—</div><div style="font-size:10px;color:var(--text-muted);">億VND</div></div>
+        </div>
+        <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+          <div style="text-align:center;background:rgba(230,57,70,.1);border-radius:6px;padding:8px;"><div style="font-size:10px;color:var(--text-muted);">電気系統</div><div style="font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:var(--electric);" id="stat2025Electric">—</div><div style="font-size:10px;color:var(--text-muted);">件</div></div>
+          <div style="text-align:center;background:rgba(42,157,143,.1);border-radius:6px;padding:8px;"><div style="font-size:10px;color:var(--text-muted);">その他</div><div style="font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:var(--green);" id="stat2025Other">—</div><div style="font-size:10px;color:var(--text-muted);">件</div></div>
+          <div style="text-align:center;background:rgba(69,123,157,.1);border-radius:6px;padding:8px;"><div style="font-size:10px;color:var(--text-muted);">不明</div><div style="font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:var(--unknown);" id="stat2025Unknown">—</div><div style="font-size:10px;color:var(--text-muted);">件</div></div>
+        </div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:6px;">※ 調査済み案件のみの集計</div>
+      </div>
+      <div style="background:var(--surface);padding:20px;">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:14px;display:flex;align-items:center;gap:6px;">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#f4a261;"></span>2026年 累計
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div><div style="font-size:10px;color:var(--text-muted);">全国火災</div><div style="font-size:26px;font-weight:700;font-family:'DM Mono',monospace;color:var(--accent3);" id="stat2026Total">—</div><div style="font-size:10px;color:var(--text-muted);">件</div></div>
+          <div><div style="font-size:10px;color:var(--text-muted);">工場・倉庫</div><div style="font-size:26px;font-weight:700;font-family:'DM Mono',monospace;color:var(--accent3);" id="stat2026Industrial">—</div><div style="font-size:10px;color:var(--text-muted);">件</div></div>
+          <div><div style="font-size:10px;color:var(--text-muted);">死者</div><div style="font-size:22px;font-weight:700;font-family:'DM Mono',monospace;color:var(--text-muted);" id="stat2026Deaths">—</div><div style="font-size:10px;color:var(--text-muted);">名</div></div>
+          <div><div style="font-size:10px;color:var(--text-muted);">財産被害</div><div style="font-size:22px;font-weight:700;font-family:'DM Mono',monospace;color:var(--text-muted);" id="stat2026Damage">—</div><div style="font-size:10px;color:var(--text-muted);">億VND</div></div>
+        </div>
+        <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+          <div style="text-align:center;background:rgba(230,57,70,.1);border-radius:6px;padding:8px;"><div style="font-size:10px;color:var(--text-muted);">電気系統</div><div style="font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:var(--electric);" id="stat2026Electric">—</div><div style="font-size:10px;color:var(--text-muted);">件</div></div>
+          <div style="text-align:center;background:rgba(42,157,143,.1);border-radius:6px;padding:8px;"><div style="font-size:10px;color:var(--text-muted);">その他</div><div style="font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:var(--green);" id="stat2026Other">—</div><div style="font-size:10px;color:var(--text-muted);">件</div></div>
+          <div style="text-align:center;background:rgba(69,123,157,.1);border-radius:6px;padding:8px;"><div style="font-size:10px;color:var(--text-muted);">不明</div><div style="font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:var(--unknown);" id="stat2026Unknown">—</div><div style="font-size:10px;color:var(--text-muted);">件</div></div>
+        </div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:6px;">※ 調査済み案件のみの集計</div>
+      </div>
+      <div style="background:var(--surface2);padding:20px;position:relative;">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-muted);margin-bottom:14px;display:flex;align-items:center;gap:6px;">
+          <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#e63946;animation:pulse 2s infinite;"></span>
+          最新月 <span id="officialMonth" style="color:var(--text);font-weight:600;margin-left:4px;"></span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div><div style="font-size:10px;color:var(--text-muted);">全国火災</div><div style="font-size:26px;font-weight:700;font-family:'DM Mono',monospace;color:var(--electric);" id="statLatestTotal">—</div><div style="font-size:10px;color:var(--text-muted);">件</div></div>
+          <div><div style="font-size:10px;color:var(--text-muted);">工場・倉庫</div><div style="font-size:26px;font-weight:700;font-family:'DM Mono',monospace;color:var(--electric);" id="statLatestIndustrial">—</div><div style="font-size:10px;color:var(--text-muted);">件</div></div>
+          <div><div style="font-size:10px;color:var(--text-muted);">死者</div><div style="font-size:22px;font-weight:700;font-family:'DM Mono',monospace;color:var(--text-muted);" id="statLatestDeaths">—</div><div style="font-size:10px;color:var(--text-muted);">名</div></div>
+          <div><div style="font-size:10px;color:var(--text-muted);">財産被害</div><div style="font-size:22px;font-weight:700;font-family:'DM Mono',monospace;color:var(--text-muted);" id="statLatestDamage">—</div><div style="font-size:10px;color:var(--text-muted);">億VND</div></div>
+        </div>
+        <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+          <div style="text-align:center;background:rgba(230,57,70,.1);border-radius:6px;padding:8px;"><div style="font-size:10px;color:var(--text-muted);">電気系統</div><div style="font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:var(--electric);" id="statLatestElectric">—</div><div style="font-size:10px;color:var(--text-muted);">件</div></div>
+          <div style="text-align:center;background:rgba(42,157,143,.1);border-radius:6px;padding:8px;"><div style="font-size:10px;color:var(--text-muted);">その他</div><div style="font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:var(--green);" id="statLatestOther">—</div><div style="font-size:10px;color:var(--text-muted);">件</div></div>
+          <div style="text-align:center;background:rgba(69,123,157,.1);border-radius:6px;padding:8px;"><div style="font-size:10px;color:var(--text-muted);">不明</div><div style="font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:var(--unknown);" id="statLatestUnknown">—</div><div style="font-size:10px;color:var(--text-muted);">件</div></div>
+        </div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:6px;">※ 調査済み案件のみの集計</div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--text-muted);margin-top:8px;padding:0 4px;">
+      ※ 出典：<a href="https://canhsatpccc.gov.vn/vi/news/thong-cao-bao-chi" target="_blank" style="color:var(--accent2);">ベトナム公安消防警察局</a>　工場・倉庫火災件数は月次レポートに記載がない場合「—」となります
+    </div>
+    <div class="notice" style="margin-top:24px;">
+      <span>⚠ 注意：</span>以下、検索でヒットしたニュースを自動カウントしています。同じ火災でもニュースソースが異なると別件として扱いカウントされる場合があります。従い、以下の年別合計数値や原因別比率は参考値としてご理解ください。
+    </div>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="kpi-grid">
+    <div class="kpi-card red"><div class="kpi-label">2025年 工場火災ニュース検出件数</div><div class="kpi-value" id="kpi2025">—</div><div class="kpi-sub">件</div></div>
+    <div class="kpi-card blue"><div class="kpi-label">2026年 工場火災ニュース検出件数</div><div class="kpi-value" id="kpi2026">—</div><div class="kpi-sub">件</div></div>
+    <div class="kpi-card orange"><div class="kpi-label">工場火災電気系統 火災件数</div><div class="kpi-value" id="kpiElectric">—</div><div class="kpi-sub">件（全期間）</div></div>
+    <div class="kpi-card teal"><div class="kpi-label">工場火災原因不明・その他</div><div class="kpi-value" id="kpiOther">—</div><div class="kpi-sub">件（全期間）</div></div>
+  </div>
+
+  <!-- Map + Charts -->
+  <div class="viz-grid">
+    <div class="map-section panel">
+      <div class="panel-header">
+        <span class="panel-title">🗺 工場火災発生地域と原因(検索ニュースベース)</span>
+        <span style="font-size:11px;color:var(--text-muted);">バブルサイズ = 発生件数</span>
+      </div>
+      <div id="map"></div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--electric)"></div>電気系統</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>その他</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--unknown)"></div>不明</div>
+      </div>
+    </div>
+    <div class="chart-section panel">
+      <div class="panel-header"><span class="panel-title">📊 工場火災発生件数（年別・原因別）</span></div>
+      <div class="panel-body"><div class="chart-container"><canvas id="barChart"></canvas></div></div>
+    </div>
+    <div class="panel" style="grid-column:2;">
+      <div class="panel-header"><span class="panel-title">🥧 火災原因別比率（全期間）</span></div>
+      <div class="panel-body"><div class="chart-container"><canvas id="pieChart"></canvas></div></div>
+    </div>
+  </div>
+
+  <!-- Incident Table -->
+  <div class="table-section panel">
+    <div class="panel-header">
+      <span class="panel-title">📋 火災インシデント一覧（ニュース検索結果）</span>
+      <div class="filter-tabs">
+        <button class="tab-btn active" onclick="filterTable('all',this)">すべて</button>
+        <button class="tab-btn electric" onclick="filterTable('電気系統',this)">電気系統</button>
+        <button class="tab-btn other" onclick="filterTable('その他',this)">その他</button>
+        <button class="tab-btn unknown" onclick="filterTable('不明',this)">不明</button>
+      </div>
+    </div>
+    <div class="table-wrapper" style="max-height:360px;overflow-y:auto;">
+      <div class="loading" id="tableLoading"><div class="spinner"></div><div>データを読み込んでいます...</div></div>
+      <div id="tableError" style="display:none;padding:16px;"></div>
+      <table id="incidentTable" style="display:none;table-layout:fixed;width:100%;">
+        <colgroup>
+          <col style="width:80px;"><col style="width:160px;"><col style="width:70px;">
+          <col style="width:130px;"><col style="width:400px;"><col style="width:55px;">
+        </colgroup>
+        <thead>
+          <tr><th>発信日</th><th>発生地域</th><th>原因</th><th>原因補足</th><th>要約</th><th>リンク</th></tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  <div>🔥 ベトナム工場火災ニュース <span id="appVersionFooter">v4.6f</span> &nbsp;|&nbsp; <span style="font-family:'Times New Roman',serif;font-weight:bold;font-style:italic;">@ Itakkaskamuy</span></div>
+  <div id="footerStats">データ読み込み中...</div>
+</footer>
+
+<script>
+// ============================================================
+// 設定
+// ============================================================
+//  データは GAS が生成して GitHub に push した data.json から読み込む。
+//  スプレッドシートへの直接アクセス・GAS Web App への接続は一切行わない。
+// ============================================================
+var DATA_URL         = './data.json';
+var FALLBACK_VERSION = 'v4.6g';   // data.json に meta.version が無い場合の表示
+
+// ============================================================
+//  バージョン表示
+//  data.json の meta.version をそのまま表示する。
+//  meta.version は GAS 側でスプレッドシートのファイル名末尾から
+//  自動抽出されるため、メール配信の表示と常に一致する。
+// ============================================================
+function applyVersion(ver) {
+  document.title = 'ベトナム工場火災ニュース ' + ver;
+  var h = document.getElementById('appVersionHeader');
+  var f = document.getElementById('appVersionFooter');
+  if (h) h.textContent = ver;
+  if (f) f.textContent = ver;
+}
+
+// ============================================================
+// 日付パース（テーブル表示のソート補助用）
+// ============================================================
+function parseDate(str) {
+  if (!str) return new Date(0);
+  var s = str.trim();
+
+  // YYYY/MM/DD または YYYY-MM-DD（GASが出力する標準形式）
+  var m = s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+  if (m) return new Date(parseInt(m[1]), parseInt(m[2])-1, parseInt(m[3]));
+
+  // YYYY年M月D日
+  m = s.match(/^(\d{4})年\s*(\d{1,2})月\s*(\d{1,2})日/);
+  if (m) return new Date(parseInt(m[1]), parseInt(m[2])-1, parseInt(m[3]));
+
+  // MM/DD/YYYY
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (m) return new Date(parseInt(m[3]), parseInt(m[1])-1, parseInt(m[2]));
+
+  var d = new Date(s);
+  if (!isNaN(d.getTime())) return d;
+  return new Date(0);
+}
+
+// ============================================================
+// データ読み込み（data.json 一本）
+//  返り値: { meta, items, stats }
+//  旧形式（配列のみ）でも壊れないよう後方互換を持たせている
+// ============================================================
+async function loadData() {
+  var res = await fetch(DATA_URL, { cache: 'no-cache' });
+  if (!res.ok) throw new Error('data.json の読み込みに失敗しました (HTTP ' + res.status + ')');
+
+  var raw = await res.json();
+
+  if (Array.isArray(raw)) {
+    return { meta: {}, items: raw, stats: [] };
+  }
+  return {
+    meta:  raw.meta  || {},
+    items: raw.items || [],
+    stats: raw.stats || []
+  };
+}
+
+// ============================================================
+// KPI
+// ============================================================
+function calcKPIs(incidents) {
+  return {
+    count2025: incidents.filter(function(r){return r.date&&r.date.indexOf('2025')>=0;}).length,
+    count2026: incidents.filter(function(r){return r.date&&r.date.indexOf('2026')>=0;}).length,
+    electric:  incidents.filter(function(r){return r.causeType==='電気系統';}).length,
+    other:     incidents.filter(function(r){return r.causeType!=='電気系統';}).length,
+  };
+}
+
+// ============================================================
+// グラフ
+// ============================================================
+function renderBarChart(incidents) {
+  var years=['2025','2026'];
+  var causes=['電気系統','その他','不明'];
+  var colors={'電気系統':'rgba(230,57,70,.8)','その他':'rgba(42,157,143,.8)','不明':'rgba(69,123,157,.8)'};
+  var datasets=causes.map(function(cause){
+    return {
+      label:cause,
+      data:years.map(function(yr){
+        return incidents.filter(function(r){return r.date&&r.date.indexOf(yr)>=0&&r.causeType===cause;}).length;
+      }),
+      backgroundColor:colors[cause], borderRadius:4,
+    };
+  });
+  new Chart(document.getElementById('barChart').getContext('2d'),{
+    type:'bar',
+    data:{labels:['2025年','2026年'],datasets:datasets},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#6b7fa3',font:{size:11}}}},
+      scales:{
+        x:{stacked:true,ticks:{color:'#6b7fa3'},grid:{color:'#1e2d45'}},
+        y:{stacked:true,ticks:{color:'#6b7fa3',precision:0},grid:{color:'#1e2d45'}}
+      }
+    }
+  });
+}
+
+function renderPieChart(incidents) {
+  var electric=incidents.filter(function(r){return r.causeType==='電気系統';}).length;
+  var other   =incidents.filter(function(r){return r.causeType==='その他';}).length;
+  var unknown =incidents.filter(function(r){return r.causeType==='不明';}).length;
+  var total   =electric+other+unknown||1;
+  new Chart(document.getElementById('pieChart').getContext('2d'),{
+    type:'doughnut',
+    data:{
+      labels:['電気系統','その他','不明'],
+      datasets:[{
+        data:[electric,other,unknown],
+        backgroundColor:['rgba(230,57,70,.85)','rgba(42,157,143,.85)','rgba(69,123,157,.85)'],
+        borderColor:'#111827', borderWidth:2,
+      }]
+    },
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{position:'right',labels:{color:'#6b7fa3',font:{size:11},padding:12}},
+        tooltip:{callbacks:{label:function(ctx){return ' '+ctx.label+': '+ctx.raw+'件 ('+Math.round(ctx.raw/total*100)+'%)'}}}
+      }
+    }
+  });
+}
+
+// ============================================================
+// マップ
+// ============================================================
+var mapInstance=null;
+function renderMap(incidents) {
+  if(mapInstance){mapInstance.remove();}
+  mapInstance=L.map('map',{zoomControl:true}).setView([16.0,107.5],5);
+  // CARTO basemaps がAPIキー必須化したため Esri Dark Gray Canvas（キー不要）に変更
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',{
+    attribution:'Tiles © Esri — Esri, HERE, Garmin, © OpenStreetMap contributors',maxZoom:16
+  }).addTo(mapInstance);
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',{
+    maxZoom:16
+  }).addTo(mapInstance);
+
+  var groups={};
+  incidents.forEach(function(inc){
+    if(!inc.lat||!inc.lng) return;
+    var key=inc.lat.toFixed(2)+'_'+inc.lng.toFixed(2);
+    if(!groups[key]) groups[key]={lat:inc.lat,lng:inc.lng,items:[]};
+    groups[key].items.push(inc);
+  });
+
+  var colorMap={'電気系統':'#e63946','その他':'#2a9d8f','不明':'#457b9d'};
+  Object.values(groups).forEach(function(g){
+    var count=g.items.length;
+    var color=colorMap[g.items[0].causeType]||'#457b9d';
+    var radius=Math.max(10,Math.min(35,10+count*8));
+    var circle=L.circleMarker([g.lat,g.lng],{
+      radius:radius,color:color,fillColor:color,fillOpacity:.5,weight:2,opacity:.9
+    }).addTo(mapInstance);
+    var popup=g.items.map(function(inc){
+      return '<div style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid #333;">'
+        +'<div style="font-weight:bold;color:#e8edf5;font-size:12px;">'+(inc.date||'日付不明')+'</div>'
+        +'<div style="color:#aaa;font-size:11px;">'+inc.region+'</div>'
+        +'<span style="background:'+color+'33;color:'+color+';border:1px solid '+color+'66;padding:1px 6px;border-radius:8px;font-size:10px;">'+inc.causeType+'</span>'
+        +(inc.url?'<br><a href="'+inc.url+'" target="_blank" style="color:#457b9d;font-size:10px;">記事を開く →</a>':'')
+        +'</div>';
+    }).join('');
+    circle.bindPopup(
+      '<div style="font-family:sans-serif;max-width:240px;background:#111827;color:#e8edf5;padding:4px;">'
+      +'<div style="font-size:11px;color:#6b7fa3;margin-bottom:8px;">'+g.items[0].region+' — '+count+'件</div>'
+      +popup+'</div>',{maxWidth:260}
+    );
+  });
+}
+
+// ============================================================
+// テーブル
+// ============================================================
+var allIncidents=[];
+
+function formatSummary(summary) {
+  if(!summary) return '';
+  return summary.split('\n').map(function(line){
+    var m=line.match(/^(■[^:：]+[:：])(.*)/);
+    if(m) return '<span class="summary-label">'+m[1]+'</span>'+m[2];
+    return line;
+  }).join('<br>');
+}
+
+function renderTable(incidents) {
+  var tbody=document.getElementById('tableBody');
+  tbody.innerHTML='';
+  if(!incidents.length){
+    tbody.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:32px;">該当するデータがありません</td></tr>';
+    return;
+  }
+  incidents.forEach(function(inc){
+    var cc=inc.causeType==='電気系統'?'electric':inc.causeType==='その他'?'other':'unknown';
+    var tr=document.createElement('tr');
+    tr.dataset.cause=inc.causeType;
+    tr.innerHTML='<td class="date-cell">'+(inc.date||'—')+'</td>'
+      +'<td class="region-cell">'+(inc.region||'—')+'</td>'
+      +'<td><span class="cause-badge cause-'+cc+'">'+(inc.causeType||'不明')+'</span></td>'
+      +'<td style="color:var(--text-muted);font-size:11px;max-width:180px;">'+(inc.causeDetail||'—')+'</td>'
+      +'<td class="summary-cell"><div class="summary-text">'+formatSummary(inc.summary)+'</div></td>'
+      +'<td>'+(inc.url?'<a href="'+inc.url+'" target="_blank" class="link-btn">記事 →</a>':'—')+'</td>';
+    tbody.appendChild(tr);
+  });
+}
+
+function filterTable(cause,btn) {
+  document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});
+  btn.classList.add('active');
+  renderTable(cause==='all'?allIncidents:allIncidents.filter(function(r){return r.causeType===cause;}));
+}
+
+// ============================================================
+// 官公庁統計
+//  data.json の stats 配列（英字キー）を描画する
+// ============================================================
+function renderOfficialStats(statsData) {
+  if(!statsData||!statsData.length) return;
+  document.getElementById('officialStatsPanel').style.display='block';
+
+  function sumKey(rows,key){
+    return rows.reduce(function(acc,r){
+      var v=r[key];
+      return acc+(typeof v==='number'&&!isNaN(v)?v:0);
+    },0);
+  }
+  function fmtNum(n){ return n>0?Math.round(n).toLocaleString():'—'; }
+  function fmtDec(n){ return n>0?n.toFixed(2):'—'; }
+  function fmtCell(v){ return (typeof v==='number'&&v>0)?Math.round(v).toLocaleString():'—'; }
+
+  function fillYear(prefix, rows){
+    document.getElementById(prefix+'Total').textContent      =fmtNum(sumKey(rows,'totalFires'));
+    document.getElementById(prefix+'Industrial').textContent =fmtNum(sumKey(rows,'industrialFires'));
+    document.getElementById(prefix+'Deaths').textContent     =fmtNum(sumKey(rows,'deaths'));
+    document.getElementById(prefix+'Damage').textContent     =fmtDec(sumKey(rows,'damageBillionVND'));
+    document.getElementById(prefix+'Electric').textContent   =fmtNum(sumKey(rows,'causeElectric'));
+    document.getElementById(prefix+'Other').textContent      =fmtNum(sumKey(rows,'causeOther'));
+    document.getElementById(prefix+'Unknown').textContent    =fmtNum(sumKey(rows,'causeUnknown'));
+  }
+
+  fillYear('stat2025', statsData.filter(function(r){return (r.month||'').indexOf('2025')>=0;}));
+  fillYear('stat2026', statsData.filter(function(r){return (r.month||'').indexOf('2026')>=0;}));
+
+  // 最新月（GAS側で降順ソート済みだが念のため再ソート）
+  var latest=statsData.slice().sort(function(a,b){
+    return String(b.month||'').localeCompare(String(a.month||''));
+  })[0];
+
+  document.getElementById('officialMonth').textContent        =latest.month||'';
+  document.getElementById('statLatestTotal').textContent      =fmtCell(latest.totalFires);
+  document.getElementById('statLatestIndustrial').textContent =fmtCell(latest.industrialFires);
+  document.getElementById('statLatestDeaths').textContent     =fmtCell(latest.deaths);
+  document.getElementById('statLatestDamage').textContent     =fmtDec(latest.damageBillionVND||0);
+  document.getElementById('statLatestElectric').textContent   =fmtCell(latest.causeElectric);
+  document.getElementById('statLatestOther').textContent      =fmtCell(latest.causeOther);
+  document.getElementById('statLatestUnknown').textContent    =fmtCell(latest.causeUnknown);
+
+  if(latest.reportUrl) document.getElementById('officialReportUrl').href=latest.reportUrl;
+}
+
+// ============================================================
+// メイン初期化
+// ============================================================
+async function init() {
+  try {
+    var data = await loadData();
+
+    // ---- バージョン表示 ----
+    var ver = data.meta.version || FALLBACK_VERSION;
+    applyVersion(ver);
+    console.log('[version]', data.meta.version ? 'data.json から取得: '+ver : '固定値を使用: '+ver);
+
+    // ---- インシデント ----
+    // GAS側で整形・ソート済みだが、念のため防御的にフィルタ・再ソートする
+    allIncidents = (data.items||[]).filter(function(r){
+      if(r.region==='該当なし') return false;
+      return (r.date&&r.date!=='')||(r.region&&r.region!=='');
+    });
+    allIncidents.sort(function(a,b){ return parseDate(b.date)-parseDate(a.date); });
+
+    console.log('[init] incidents:', allIncidents.length, '/ stats:', (data.stats||[]).length);
+    if(allIncidents.length===0) throw new Error('データが空です');
+
+    var kpis=calcKPIs(allIncidents);
+    document.getElementById('kpi2025').textContent    =kpis.count2025;
+    document.getElementById('kpi2026').textContent    =kpis.count2026;
+    document.getElementById('kpiElectric').textContent=kpis.electric;
+    document.getElementById('kpiOther').textContent   =kpis.other;
+
+    renderBarChart(allIncidents);
+    renderPieChart(allIncidents);
+    renderMap(allIncidents);
+
+    document.getElementById('tableLoading').style.display ='none';
+    document.getElementById('incidentTable').style.display='table';
+    renderTable(allIncidents);
+
+    // ---- 更新日時はGASの生成時刻を表示（ページを開いた時刻ではない）----
+    document.getElementById('lastUpdated').textContent =
+      data.meta.generatedAt ? '更新: '+data.meta.generatedAt : '更新日時不明';
+
+    document.getElementById('footerStats').textContent =
+      '総件数: '+allIncidents.length+'件 | 2025年: '+kpis.count2025+'件 | 2026年: '+kpis.count2026+'件';
+
+    // ---- 官公庁統計 ----
+    try {
+      renderOfficialStats(data.stats||[]);
+    } catch(e){ console.log('統計パネルの描画をスキップ:', e.message); }
+
+  } catch(e) {
+    document.getElementById('tableLoading').style.display='none';
+    var err=document.getElementById('tableError');
+    err.style.display='block';
+    err.innerHTML='<div class="error-msg">⚠ '+e.message+'</div>';
+    console.error(e);
+  }
+}
+
+// ============================================================
+// イベント
+// ============================================================
+document.addEventListener('DOMContentLoaded',function(){
+  init();
+  var s=document.createElement('style');
+  s.textContent='.leaflet-popup-content-wrapper{background:#111827!important;border:1px solid #1e2d45!important;border-radius:8px!important;box-shadow:0 4px 24px rgba(0,0,0,.6)!important}.leaflet-popup-tip{background:#111827!important}.leaflet-popup-content{margin:12px!important}.leaflet-container{font-family:sans-serif!important}';
+  document.head.appendChild(s);
+});
+</script>
+</body>
+</html>
